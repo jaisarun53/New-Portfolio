@@ -194,7 +194,7 @@ span {
   position: relative;
 }
 .text-animation span::before {
-  content: "Project Manager";
+  content: "Junior Project Manager";
   color: var(--main-color);
   animation: words 20s infinite;
 }
@@ -218,26 +218,26 @@ span {
 @keyframes words {
   0%,
   20% {
-    content: "Project Manager";
+    content: "Junior Project Manager";
   }
   21%,
   40% {
-    content: "Project Manager";
+    content: "Junior Project Manager";
     /* content: "Web Designer"; */
   }
   41%,
   60% {
-    content: "Project Manager";
+    content: "Junior Project Manager";
     /* content: "UI / UX Designer"; */
   }
   61%,
   80% {
-    content: "Project Manager";
+    content: "Junior Project Manager";
     /* content: "Project Manager"; */
   }
   81%,
   100% {
-    content: "Project Manager";
+    content: "Junior Project Manager";
     /* content:"SEO Specialist" */
   }
 }
