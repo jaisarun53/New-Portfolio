@@ -567,6 +567,53 @@
     border: 1px solid #ff4444;
 }
 
+/* Settings Styles */
+.settings-description {
+    font-size: 1.4rem;
+    color: #aaa;
+    margin-bottom: 2rem;
+}
+
+.form-help {
+    display: block;
+    font-size: 1.2rem;
+    color: #aaa;
+    margin-top: 0.5rem;
+}
+
+.form-help a {
+    color: var(--main-color);
+    text-decoration: none;
+}
+
+.form-help code {
+    background: var(--bg-color);
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+    font-size: 1.1rem;
+}
+
+.token-status {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-size: 1.4rem;
+}
+
+.token-status-ok {
+    color: #00ff00;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.token-status-none {
+    color: #ffaa00;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Export Styles */
 .export-card {
     background: var(--second-bg-color);

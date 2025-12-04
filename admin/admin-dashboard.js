@@ -87,6 +87,52 @@ function setupEventListeners() {
             messageDiv.className = 'message error';
         }
     });
+
+    // GitHub token form submission
+    document.getElementById('githubTokenForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const token = document.getElementById('githubToken').value.trim();
+        const messageDiv = document.getElementById('githubTokenMessage');
+        const statusDiv = document.getElementById('tokenStatus');
+
+        if (!token) {
+            messageDiv.textContent = 'Please enter a GitHub token';
+            messageDiv.className = 'message error';
+            return;
+        }
+
+        // Test token
+        messageDiv.textContent = 'Testing token...';
+        messageDiv.className = 'message';
+        const isValid = await testGitHubToken(token);
+
+        if (isValid) {
+            saveGitHubToken(token);
+            messageDiv.textContent = 'GitHub token saved successfully!';
+            messageDiv.className = 'message success';
+            statusDiv.innerHTML = '<span class="token-status-ok">✅ Token configured - Auto-publish enabled</span>';
+            document.getElementById('githubToken').value = '';
+            loadTokenStatus();
+        } else {
+            messageDiv.textContent = 'Invalid token. Please check your token and try again.';
+            messageDiv.className = 'message error';
+            statusDiv.innerHTML = '';
+        }
+    });
+
+    // Load token status on page load
+    loadTokenStatus();
+}
+
+// Load and display token status
+function loadTokenStatus() {
+    const token = getGitHubToken();
+    const statusDiv = document.getElementById('tokenStatus');
+    if (token) {
+        statusDiv.innerHTML = '<span class="token-status-ok">✅ Auto-publish enabled</span>';
+    } else {
+        statusDiv.innerHTML = '<span class="token-status-none">⚠️ Auto-publish disabled - Add GitHub token to enable</span>';
+    }
 }
 
 // Show specific section
@@ -189,7 +235,7 @@ function displayPosts(posts) {
 }
 
 // Save post (create or update)
-function savePost() {
+async function savePost() {
     const title = document.getElementById('postTitle').value.trim();
     const date = document.getElementById('postDate').value;
     const category = document.getElementById('postCategory').value.trim();
@@ -228,22 +274,47 @@ function savePost() {
 
     localStorage.setItem('blogPosts', JSON.stringify(posts));
     
-    // Show success message with export reminder
-    const shouldExport = confirm('Post saved successfully!\n\n⚠️ IMPORTANT: To make this post visible on your website, you need to export blog.json and upload it to GitHub.\n\nWould you like to export blog.json now?');
-    
-    if (shouldExport) {
-        // Reset form first
-        resetForm();
-        showSection('export');
-        // Auto-trigger export after a short delay
-        setTimeout(() => {
-            exportBlog();
-            alert('blog.json downloaded! Now upload this file to your GitHub repository to make the post live on your website.');
-        }, 500);
+    // Auto-publish to GitHub
+    const token = getGitHubToken();
+    if (token) {
+        // Show loading
+        const saveBtn = document.querySelector('.btn-save');
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Publishing...';
+        saveBtn.disabled = true;
+        
+        try {
+            await publishToGitHub();
+            alert('✅ Post saved and published successfully!\n\nYour blog post is now live on your website!');
+            resetForm();
+            showSection('posts');
+            loadPosts();
+        } catch (error) {
+            console.error('Publish error:', error);
+            const shouldExport = confirm(`⚠️ Auto-publish failed: ${error.message}\n\nWould you like to export blog.json manually?`);
+            if (shouldExport) {
+                resetForm();
+                showSection('export');
+                setTimeout(() => exportBlog(), 500);
+            } else {
+                resetForm();
+                showSection('posts');
+            }
+        } finally {
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+        }
     } else {
-        // Reset form and go back to posts list
-        resetForm();
-        showSection('posts');
+        // No token configured, offer to export
+        const shouldExport = confirm('Post saved!\n\n⚠️ GitHub token not configured. To auto-publish, add your GitHub token in Settings.\n\nWould you like to export blog.json manually?');
+        if (shouldExport) {
+            resetForm();
+            showSection('export');
+            setTimeout(() => exportBlog(), 500);
+        } else {
+            resetForm();
+            showSection('posts');
+        }
     }
 }
 

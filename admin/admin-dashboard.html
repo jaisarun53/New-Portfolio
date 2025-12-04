@@ -95,6 +95,26 @@
             <!-- Settings Section -->
             <div id="settings-section" class="content-section">
                 <h2>Settings</h2>
+                
+                <div class="settings-card">
+                    <h3>GitHub Auto-Publish</h3>
+                    <p class="settings-description">Configure GitHub token to automatically publish blog posts without manual export/upload.</p>
+                    <form id="githubTokenForm" class="settings-form">
+                        <div class="form-group">
+                            <label for="githubToken">GitHub Personal Access Token</label>
+                            <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" 
+                                   value="" autocomplete="off">
+                            <small class="form-help">
+                                <a href="https://github.com/settings/tokens/new" target="_blank">Create token</a> 
+                                (needs <code>repo</code> permission)
+                            </small>
+                        </div>
+                        <div id="githubTokenMessage" class="message"></div>
+                        <button type="submit" class="btn-save">Save Token</button>
+                    </form>
+                    <div id="tokenStatus" class="token-status"></div>
+                </div>
+
                 <div class="settings-card">
                     <h3>Change Password</h3>
                     <form id="passwordForm" class="settings-form">
@@ -133,6 +153,7 @@
     <!-- Quill Editor JS -->
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script src="admin-auth.js"></script>
+    <script src="github-api.js"></script>
     <script src="admin-dashboard.js"></script>
 </body>
 </html>

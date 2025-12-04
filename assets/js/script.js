@@ -58,16 +58,23 @@ async function loadBlogPosts() {
         // Sort posts by date (newest first)
         const sortedPosts = posts.sort((a, b) => new Date(b.date) - new Date(a.date));
         
-        blogContainer.innerHTML = sortedPosts.map(post => `
+        blogContainer.innerHTML = sortedPosts.map(post => {
+            // Truncate content for preview (first 200 chars)
+            const previewContent = post.content.replace(/<[^>]*>/g, '').substring(0, 200) + '...';
+            return `
             <div class="blog-post">
                 <div class="blog-header">
                     <span class="blog-date">${formatDate(post.date)}</span>
                     ${post.category ? `<span class="blog-category">${escapeHtml(post.category)}</span>` : ''}
                 </div>
-                <h3 class="blog-title">${escapeHtml(post.title)}</h3>
-                <div class="blog-content">${post.content}</div>
+                <h3 class="blog-title">
+                    <a href="blog-post.html?id=${post.id}" class="blog-title-link">${escapeHtml(post.title)}</a>
+                </h3>
+                <div class="blog-preview">${previewContent}</div>
+                <a href="blog-post.html?id=${post.id}" class="read-more">Read More →</a>
             </div>
-        `).join('');
+        `;
+        }).join('');
     } else {
         blogContainer.innerHTML = '<p class="no-posts">No blog posts yet. Check back soon!</p>';
     }

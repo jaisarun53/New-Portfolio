@@ -544,6 +544,36 @@ span {
   font-weight: 400;
 }
 
+.blog-preview {
+  font-size: 1.6rem;
+  color: #aaa;
+  line-height: 1.8;
+  margin-bottom: 1.5rem;
+}
+
+.blog-title-link {
+  color: var(--text-color);
+  text-decoration: none;
+  transition: 0.3s ease;
+}
+
+.blog-title-link:hover {
+  color: var(--main-color);
+}
+
+.read-more {
+  display: inline-block;
+  color: var(--main-color);
+  font-size: 1.6rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.3s ease;
+}
+
+.read-more:hover {
+  transform: translateX(5px);
+}
+
 /* Rich text content styling */
 .blog-content h1,
 .blog-content h2,
