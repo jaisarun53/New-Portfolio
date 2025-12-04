@@ -97,20 +97,32 @@
                 <h2>Settings</h2>
                 
                 <div class="settings-card">
-                    <h3>GitHub Auto-Publish</h3>
-                    <p class="settings-description">Configure GitHub token to automatically publish blog posts without manual export/upload.</p>
+                    <h3>🚀 GitHub Auto-Publish</h3>
+                    <p class="settings-description">Configure GitHub token to automatically publish blog posts directly to your website. No manual upload needed!</p>
+                    
+                    <div style="background: rgba(0, 238, 238, 0.1); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem; border-left: 4px solid var(--main-color);">
+                        <strong style="color: var(--main-color);">Quick Setup:</strong>
+                        <ol style="margin: 1rem 0 0 0; padding-left: 2rem; font-size: 1.4rem; line-height: 2;">
+                            <li>Go to <a href="https://github.com/settings/tokens/new" target="_blank" style="color: var(--main-color);">Create Token</a></li>
+                            <li>Name: "Blog Auto-Publish"</li>
+                            <li>Check <code style="background: var(--bg-color); padding: 0.2rem 0.5rem; border-radius: 0.3rem;">repo</code> permission</li>
+                            <li>Generate and copy token (starts with <code>ghp_</code>)</li>
+                            <li>Paste below and save</li>
+                        </ol>
+                    </div>
+                    
                     <form id="githubTokenForm" class="settings-form">
                         <div class="form-group">
                             <label for="githubToken">GitHub Personal Access Token</label>
                             <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" 
                                    value="" autocomplete="off">
                             <small class="form-help">
-                                <a href="https://github.com/settings/tokens/new" target="_blank">Create token</a> 
+                                <a href="https://github.com/settings/tokens/new" target="_blank" style="color: var(--main-color); font-weight: 600;">→ Create token here</a> 
                                 (needs <code>repo</code> permission)
                             </small>
                         </div>
                         <div id="githubTokenMessage" class="message"></div>
-                        <button type="submit" class="btn-save">Save Token</button>
+                        <button type="submit" class="btn-save">Save Token & Enable Auto-Publish</button>
                     </form>
                     <div id="tokenStatus" class="token-status"></div>
                 </div>

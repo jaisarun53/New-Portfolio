@@ -309,11 +309,14 @@ async function savePost() {
     saveBtn.disabled = true;
     
     // Try to auto-publish to GitHub
+    let publishSuccess = false;
     const token = typeof getGitHubToken !== 'undefined' ? getGitHubToken() : null;
+    
     if (token && typeof publishToGitHub !== 'undefined') {
         try {
             await publishToGitHub();
-            alert('✅ Post saved and published successfully!\n\nYour blog post is now live on your website!');
+            publishSuccess = true;
+            alert('✅ Post saved and published successfully!\n\nYour blog post is now live on your website!\n\nIt may take 1-2 minutes to appear.');
             resetForm();
             showSection('posts');
             loadPosts();
@@ -322,17 +325,40 @@ async function savePost() {
             return;
         } catch (error) {
             console.error('Publish error:', error);
-            // Fall through to export option
+            const errorMsg = error.message || 'Unknown error';
+            
+            // If token is invalid or expired, clear it
+            if (errorMsg.includes('Bad credentials') || errorMsg.includes('401')) {
+                localStorage.removeItem('githubToken');
+                alert('⚠️ GitHub token is invalid or expired.\n\nPlease go to Settings and add a new token.\n\nFalling back to manual export...');
+            } else {
+                alert(`⚠️ Auto-publish failed: ${errorMsg}\n\nFalling back to manual export...`);
+            }
         }
     }
     
-    // If auto-publish failed or no token, automatically export
-    saveBtn.innerHTML = '<i class="bx bx-download"></i> Exporting...';
+    // If no token or publish failed, show setup guide
+    if (!token) {
+        const setupToken = confirm('🚀 Enable Auto-Publish!\n\nTo publish posts directly to your website:\n1. Click OK to go to Settings\n2. Add your GitHub Personal Access Token\n3. Posts will auto-publish when you save!\n\nClick OK to set up now, or Cancel to export manually.');
+        
+        if (setupToken) {
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+            showSection('settings');
+            // Focus on token input
+            setTimeout(() => {
+                document.getElementById('githubToken').focus();
+                alert('📝 Instructions:\n\n1. Go to: https://github.com/settings/tokens/new\n2. Name: "Blog Auto-Publish"\n3. Check "repo" permission\n4. Generate token\n5. Copy token (starts with ghp_)\n6. Paste it below and click Save');
+            }, 500);
+            return;
+        }
+    }
     
-    // Auto-export the file
+    // Fallback: Auto-export the file
+    saveBtn.innerHTML = '<i class="bx bx-download"></i> Exporting...';
     setTimeout(() => {
         exportBlog();
-        alert('✅ Post saved!\n\n📤 IMPORTANT: blog.json has been downloaded.\n\nTo make your post live:\n1. Go to GitHub: https://github.com/jaisarun53/New-Portfolio\n2. Navigate to data/ folder\n3. Click blog.json → Edit\n4. Replace all content with downloaded file\n5. Commit changes\n\n💡 TIP: Add GitHub token in Settings for auto-publish!');
+        alert('✅ Post saved!\n\n📤 blog.json downloaded.\n\nTo make your post live:\n1. Go to: https://github.com/jaisarun53/New-Portfolio/tree/main/data\n2. Click blog.json → Edit\n3. Replace content with downloaded file\n4. Commit changes\n\n💡 Enable auto-publish in Settings to skip this step!');
         resetForm();
         showSection('posts');
         loadPosts();
