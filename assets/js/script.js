@@ -101,6 +101,6 @@ document.addEventListener('DOMContentLoaded', loadBlogPosts);
 // Hidden admin access shortcut (Ctrl+Shift+A)
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-        window.location.href = 'admin/admin-login.html';
+        window.location.href = 'admin-login.html';
     }
 });
