@@ -154,12 +154,38 @@ function setupEventListeners() {
 
 // Load and display token status
 function loadTokenStatus() {
-    const token = getGitHubToken();
+    const token = typeof getGitHubToken !== 'undefined' ? getGitHubToken() : null;
     const statusDiv = document.getElementById('tokenStatus');
     if (token) {
-        statusDiv.innerHTML = '<span class="token-status-ok">✅ Auto-publish enabled</span>';
+        statusDiv.innerHTML = '<span class="token-status-ok">✅ Auto-publish enabled - Posts will go live automatically!</span>';
     } else {
-        statusDiv.innerHTML = '<span class="token-status-none">⚠️ Auto-publish disabled - Add GitHub token to enable</span>';
+        statusDiv.innerHTML = '<span class="token-status-none">⚠️ Auto-publish disabled - Add GitHub token to enable direct publishing</span>';
+        
+        // Show setup reminder in posts section
+        if (document.getElementById('posts-section')) {
+            const existingReminder = document.querySelector('.setup-reminder');
+            if (!existingReminder) {
+                const reminder = document.createElement('div');
+                reminder.className = 'setup-reminder';
+                reminder.style.cssText = 'background: linear-gradient(135deg, var(--main-color), #00ccbb); color: var(--bg-color); padding: 2rem; border-radius: 1rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap;';
+                reminder.innerHTML = `
+                    <div style="flex: 1; min-width: 250px;">
+                        <strong style="font-size: 1.8rem; display: block; margin-bottom: 0.5rem;">🚀 Enable Auto-Publish!</strong>
+                        <p style="margin: 0; font-size: 1.4rem; opacity: 0.9;">Add GitHub token to publish posts directly to your website. No manual upload needed!</p>
+                    </div>
+                    <button onclick="showSection('settings'); setTimeout(() => document.getElementById('githubToken').focus(), 300);" 
+                            style="background: var(--bg-color); color: var(--main-color); border: none; padding: 1.2rem 2.5rem; border-radius: 0.5rem; font-weight: 700; cursor: pointer; font-size: 1.6rem; white-space: nowrap; transition: 0.3s ease;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                        Set Up Now →
+                    </button>
+                `;
+                const postsSection = document.getElementById('posts-section');
+                if (postsSection) {
+                    postsSection.insertBefore(reminder, postsSection.querySelector('h2').nextSibling);
+                }
+            }
+        }
     }
 }
 
