@@ -19,6 +19,13 @@
         padding: 15rem 12% 10rem;
         max-width: 900px;
         margin: 0 auto;
+        background: var(--bg-color);
+        min-height: 100vh;
+      }
+      
+      /* Smooth scroll behavior */
+      html {
+        scroll-behavior: smooth;
       }
       .blog-post-header {
         margin-bottom: 3rem;
@@ -53,9 +60,116 @@
       }
       .blog-post-content {
         font-size: 1.8rem;
-        line-height: 1.8;
+        line-height: 2;
         color: var(--text-color);
         margin-bottom: 4rem;
+        text-align: left;
+      }
+      
+      /* Enhanced readability for blog post content */
+      .blog-post-content p {
+        margin-bottom: 1.5rem;
+        text-align: justify;
+      }
+      
+      .blog-post-content h1,
+      .blog-post-content h2,
+      .blog-post-content h3,
+      .blog-post-content h4,
+      .blog-post-content h5,
+      .blog-post-content h6 {
+        color: var(--main-color);
+        margin: 3rem 0 1.5rem 0;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+      
+      .blog-post-content h1 { font-size: 3.5rem; }
+      .blog-post-content h2 { font-size: 3rem; }
+      .blog-post-content h3 { font-size: 2.5rem; }
+      .blog-post-content h4 { font-size: 2rem; }
+      
+      .blog-post-content ul,
+      .blog-post-content ol {
+        margin: 2rem 0;
+        padding-left: 3rem;
+      }
+      
+      .blog-post-content li {
+        margin-bottom: 1rem;
+      }
+      
+      .blog-post-content code {
+        background: var(--second-bg-color);
+        padding: 0.3rem 0.8rem;
+        border-radius: 0.4rem;
+        font-family: 'Courier New', monospace;
+        font-size: 1.6rem;
+        color: var(--main-color);
+      }
+      
+      .blog-post-content pre {
+        background: var(--second-bg-color);
+        padding: 2rem;
+        border-radius: 0.8rem;
+        overflow-x: auto;
+        margin: 2rem 0;
+        border-left: 4px solid var(--main-color);
+      }
+      
+      .blog-post-content pre code {
+        background: transparent;
+        padding: 0;
+        color: var(--text-color);
+        font-size: 1.5rem;
+      }
+      
+      .blog-post-content blockquote {
+        border-left: 4px solid var(--main-color);
+        padding-left: 2rem;
+        margin: 2rem 0;
+        font-style: italic;
+        color: #aaa;
+        font-size: 1.7rem;
+      }
+      
+      .blog-post-content a {
+        color: var(--main-color);
+        text-decoration: underline;
+        transition: 0.3s ease;
+      }
+      
+      .blog-post-content a:hover {
+        color: var(--text-color);
+      }
+      
+      .blog-post-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 0.8rem;
+        margin: 2rem 0;
+        box-shadow: 0 4px 15px rgba(0, 238, 238, 0.2);
+      }
+      
+      .blog-post-content strong {
+        font-weight: 700;
+        color: var(--text-color);
+      }
+      
+      .blog-post-content em {
+        font-style: italic;
+      }
+      
+      /* Reading progress indicator */
+      .reading-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0%;
+        height: 3px;
+        background: var(--main-color);
+        z-index: 1000;
+        transition: width 0.1s ease;
       }
       .back-to-blog {
         display: inline-flex;
@@ -97,6 +211,7 @@
   </head>
 
   <body>
+    <div class="reading-progress" id="readingProgress"></div>
     <header class="header">
       <a href="index.html#home" class="logo">Arun <span>Jaiswal</span></a>
       <i class="bx bx-menu" id="menu-icon"></i>
@@ -186,7 +301,7 @@
             <a href="index.html#blog" class="back-to-blog">
               <i class="bx bx-arrow-back"></i> Back to Blog
             </a>
-            <div class="blog-post-header">
+            <article class="blog-post-header">
               <div class="blog-post-meta">
                 <span class="blog-post-date">
                   <i class="bx bx-calendar"></i> ${formatDate(post.date)}
@@ -200,12 +315,17 @@
                 }
               </div>
               <h1 class="blog-post-title">${escapeHtml(post.title)}</h1>
-            </div>
+            </article>
             <div class="blog-post-content">${post.content}</div>
-            <a href="index.html#blog" class="back-to-blog">
-              <i class="bx bx-arrow-back"></i> Back to Blog
-            </a>
+            <div style="margin-top: 4rem; padding-top: 2rem; border-top: 2px solid var(--second-bg-color);">
+              <a href="index.html#blog" class="back-to-blog">
+                <i class="bx bx-arrow-back"></i> Back to Blog
+              </a>
+            </div>
           `;
+          
+          // Update reading progress after content loads
+          setTimeout(updateReadingProgress, 100);
 
           // Update page title
           document.title = `${escapeHtml(post.title)} - Arun Jaiswal`;
@@ -214,6 +334,18 @@
           container.innerHTML =
             '<div class="error">Error loading post. <a href="index.html#blog">Go back to blog</a></div>';
         }
+      }
+
+      // Reading progress indicator
+      function updateReadingProgress() {
+        const progressBar = document.getElementById('readingProgress');
+        if (!progressBar) return;
+        
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollPercent = (scrollTop / (documentHeight - windowHeight)) * 100;
+        progressBar.style.width = Math.min(100, Math.max(0, scrollPercent)) + '%';
       }
 
       // Set year
@@ -230,6 +362,12 @@
         menuIcon.classList.toggle('bx-x');
         navbar.classList.toggle('active');
       };
+
+      // Setup reading progress indicator
+      window.addEventListener('scroll', updateReadingProgress);
+      window.addEventListener('resize', updateReadingProgress);
+      // Update on load
+      setTimeout(updateReadingProgress, 500);
     </script>
   </body>
 </html>
