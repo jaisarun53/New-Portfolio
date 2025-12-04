@@ -32,26 +32,25 @@ async function loadBlogPosts() {
     const blogContainer = document.getElementById('blog-container');
     let posts = [];
     
-    // First, try to load from localStorage (if admin panel was used)
-    const storedPosts = localStorage.getItem('blogPosts');
-    if (storedPosts) {
-        try {
-            posts = JSON.parse(storedPosts);
-        } catch (e) {
-            console.error('Error parsing stored posts:', e);
+    // PRIORITY: Load from blog.json first (server file - visible to all visitors)
+    try {
+        const response = await fetch('blog.json');
+        const data = await response.json();
+        if (data.posts && data.posts.length > 0) {
+            posts = data.posts;
+            // Update localStorage cache for admin panel
+            localStorage.setItem('blogPosts', JSON.stringify(posts));
         }
-    }
-    
-    // If no posts in localStorage, try to load from blog.json
-    if (posts.length === 0) {
-        try {
-            const response = await fetch('blog.json');
-            const data = await response.json();
-            if (data.posts && data.posts.length > 0) {
-                posts = data.posts;
+    } catch (error) {
+        console.error('Error loading blog.json:', error);
+        // Fallback: Try localStorage if blog.json fails (for local testing)
+        const storedPosts = localStorage.getItem('blogPosts');
+        if (storedPosts) {
+            try {
+                posts = JSON.parse(storedPosts);
+            } catch (e) {
+                console.error('Error parsing stored posts:', e);
             }
-        } catch (error) {
-            console.error('Error loading blog.json:', error);
         }
     }
     

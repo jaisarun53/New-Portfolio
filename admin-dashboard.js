@@ -110,29 +110,46 @@ function showSection(sectionName) {
     }
 }
 
-// Load posts from localStorage
+// Load posts from localStorage and sync with blog.json
 function loadPosts() {
     let posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
     
-    // If no posts in localStorage, try to load from blog.json
-    if (posts.length === 0) {
-        fetch('blog.json')
-            .then(response => response.json())
-            .then(data => {
-                if (data.posts && data.posts.length > 0) {
-                    posts = data.posts;
-                    localStorage.setItem('blogPosts', JSON.stringify(posts));
-                    displayPosts(posts);
-                } else {
-                    displayPosts([]);
-                }
-            })
-            .catch(() => {
+    // Always try to sync with blog.json (server file) to get latest posts
+    fetch('blog.json')
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('blog.json not found');
+        })
+        .then(data => {
+            if (data.posts && data.posts.length > 0) {
+                // Merge: Use server posts as source of truth, but keep any new local posts
+                const serverPostIds = new Set(data.posts.map(p => p.id));
+                const localPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+                
+                // Add any local posts that aren't on server (newly created, not yet exported)
+                const newLocalPosts = localPosts.filter(p => !serverPostIds.has(p.id));
+                const mergedPosts = [...data.posts, ...newLocalPosts];
+                
+                // Update localStorage with merged posts
+                localStorage.setItem('blogPosts', JSON.stringify(mergedPosts));
+                displayPosts(mergedPosts);
+            } else if (posts.length > 0) {
+                // No server posts, but have local posts
+                displayPosts(posts);
+            } else {
                 displayPosts([]);
-            });
-    } else {
-        displayPosts(posts);
-    }
+            }
+        })
+        .catch(() => {
+            // blog.json not available, use localStorage only
+            if (posts.length > 0) {
+                displayPosts(posts);
+            } else {
+                displayPosts([]);
+            }
+        });
 }
 
 // Display posts in the list
@@ -211,12 +228,23 @@ function savePost() {
 
     localStorage.setItem('blogPosts', JSON.stringify(posts));
     
-    // Show success message
-    alert('Post saved successfully!');
+    // Show success message with export reminder
+    const shouldExport = confirm('Post saved successfully!\n\n⚠️ IMPORTANT: To make this post visible on your website, you need to export blog.json and upload it to GitHub.\n\nWould you like to export blog.json now?');
     
-    // Reset form and go back to posts list
-    resetForm();
-    showSection('posts');
+    if (shouldExport) {
+        // Reset form first
+        resetForm();
+        showSection('export');
+        // Auto-trigger export after a short delay
+        setTimeout(() => {
+            exportBlog();
+            alert('blog.json downloaded! Now upload this file to your GitHub repository to make the post live on your website.');
+        }, 500);
+    } else {
+        // Reset form and go back to posts list
+        resetForm();
+        showSection('posts');
+    }
 }
 
 // Edit post
@@ -247,6 +275,13 @@ function deletePost(id) {
     localStorage.setItem('blogPosts', JSON.stringify(posts));
     
     loadPosts();
+    
+    // Remind to export
+    setTimeout(() => {
+        if (confirm('Post deleted!\n\n⚠️ Remember to export blog.json and upload to GitHub to update your website.')) {
+            showSection('export');
+        }
+    }, 500);
 }
 
 // Cancel edit
@@ -293,7 +328,8 @@ function exportBlog() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    alert('blog.json downloaded! Upload this file to your server to update your website.');
+    const instructions = `✅ blog.json downloaded!\n\n📤 TO MAKE POSTS VISIBLE ON YOUR WEBSITE:\n\n1. Go to your GitHub repository\n2. Upload the downloaded blog.json file (replace the existing one)\n3. Commit and push the changes\n4. Wait 1-2 minutes for GitHub Pages to update\n\nYour blog posts will then appear on your website!`;
+    alert(instructions);
 }
 
 // Helper functions
