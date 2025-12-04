@@ -48,10 +48,14 @@ async function publishToGitHub() {
 
     // Get current file SHA (needed for update)
     let sha = null;
+    const authHeader = token.startsWith('github_pat_') 
+        ? `Bearer ${token}` 
+        : `token ${token}`;
+        
     try {
         const fileResponse = await fetch('https://api.github.com/repos/jaisarun53/New-Portfolio/contents/data/blog.json', {
             headers: {
-                'Authorization': `token ${token}`,
+                'Authorization': authHeader,
                 'Accept': 'application/vnd.github.v3+json'
             }
         });
@@ -80,7 +84,7 @@ async function publishToGitHub() {
         const response = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
-                'Authorization': `token ${token}`,
+                'Authorization': authHeader,
                 'Accept': 'application/vnd.github.v3+json',
                 'Content-Type': 'application/json'
             },
@@ -105,9 +109,14 @@ async function publishToGitHub() {
 // Test GitHub token
 async function testGitHubToken(token) {
     try {
+        // Support both classic tokens (ghp_) and fine-grained tokens (github_pat_)
+        const authHeader = token.startsWith('github_pat_') 
+            ? `Bearer ${token}` 
+            : `token ${token}`;
+            
         const response = await fetch('https://api.github.com/user', {
             headers: {
-                'Authorization': `token ${token}`,
+                'Authorization': authHeader,
                 'Accept': 'application/vnd.github.v3+json'
             }
         });
