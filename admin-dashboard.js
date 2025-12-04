@@ -392,16 +392,21 @@ async function savePost() {
             // If token is invalid or expired, clear it
             if (errorMsg.includes('Bad credentials') || errorMsg.includes('401')) {
                 localStorage.removeItem('githubToken');
-                alert('⚠️ GitHub token is invalid or expired.\n\nPlease go to Settings and add a new token.\n\nFalling back to manual export...');
+                alert('⚠️ GitHub token is invalid or expired.\n\nPlease go to Settings and add a new token to enable auto-publish.');
+                showSection('settings');
+                setTimeout(() => document.getElementById('githubToken').focus(), 500);
             } else {
-                alert(`⚠️ Auto-publish failed: ${errorMsg}\n\nFalling back to manual export...`);
+                alert(`⚠️ Auto-publish failed: ${errorMsg}\n\nPlease check your token in Settings or try again.`);
             }
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+            return;
         }
     }
     
-    // If no token or publish failed, show setup guide
+    // If no token, guide to setup
     if (!token) {
-        const setupToken = confirm('🚀 Enable Auto-Publish!\n\nTo publish posts directly to your website:\n1. Click OK to go to Settings\n2. Add your GitHub Personal Access Token\n3. Posts will auto-publish when you save!\n\nClick OK to set up now, or Cancel to export manually.');
+        const setupToken = confirm('🚀 Enable Auto-Publish!\n\nTo publish posts directly to your website:\n1. Click OK to go to Settings\n2. Add your GitHub Personal Access Token\n3. Posts will auto-publish when you save!\n\nClick OK to set up now.');
         
         if (setupToken) {
             saveBtn.innerHTML = originalText;
@@ -410,23 +415,20 @@ async function savePost() {
             // Focus on token input
             setTimeout(() => {
                 document.getElementById('githubToken').focus();
-                alert('📝 Instructions:\n\n1. Go to: https://github.com/settings/tokens/new\n2. Name: "Blog Auto-Publish"\n3. Check "repo" permission\n4. Generate token\n5. Copy token (starts with ghp_)\n6. Paste it below and click Save');
             }, 500);
+            return;
+        } else {
+            // User cancelled - just save to localStorage
+            alert('✅ Post saved to admin panel.\n\n💡 Add GitHub token in Settings to enable auto-publish to your live website.');
+            resetForm();
+            showSection('posts');
+            const currentPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+            displayPosts(currentPosts);
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
             return;
         }
     }
-    
-    // Fallback: Auto-export the file
-    saveBtn.innerHTML = '<i class="bx bx-download"></i> Exporting...';
-    setTimeout(() => {
-        exportBlog();
-        alert('✅ Post saved!\n\n📤 blog.json downloaded.\n\nTo make your post live:\n1. Go to: https://github.com/jaisarun53/New-Portfolio/tree/main/data\n2. Click blog.json → Edit\n3. Replace content with downloaded file\n4. Commit changes\n\n💡 Enable auto-publish in Settings to skip this step!');
-        resetForm();
-        showSection('posts');
-        loadPosts();
-        saveBtn.innerHTML = originalText;
-        saveBtn.disabled = false;
-    }, 500);
 }
 
 // Edit post
@@ -458,12 +460,17 @@ function deletePost(id) {
     
     loadPosts();
     
-    // Remind to export
-    setTimeout(() => {
-        if (confirm('Post deleted!\n\n⚠️ Remember to export blog.json and upload to GitHub to update your website.')) {
-            showSection('export');
+    // If token exists, try to auto-publish the updated list
+    const token = typeof getGitHubToken !== 'undefined' ? getGitHubToken() : null;
+    if (token && typeof publishToGitHub !== 'undefined') {
+        try {
+            await publishToGitHub();
+            alert('✅ Post deleted and changes published!\n\nYour website will update in 1-2 minutes.');
+        } catch (error) {
+            console.error('Publish error:', error);
+            // Silent fail - post is deleted locally
         }
-    }, 500);
+    }
 }
 
 // Cancel edit
