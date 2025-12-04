@@ -116,6 +116,70 @@ function setupEventListeners() {
         }
     });
 
+    // API config form submission
+    const apiConfigForm = document.getElementById('apiConfigForm');
+    if (apiConfigForm) {
+        apiConfigForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const apiUrl = document.getElementById('apiBaseUrl').value.trim();
+            const messageDiv = document.getElementById('apiMessage');
+            const statusDiv = document.getElementById('apiStatus');
+
+            if (!apiUrl) {
+                messageDiv.textContent = 'Please enter an API URL';
+                messageDiv.className = 'message error';
+                return;
+            }
+
+            // Test connection
+            messageDiv.textContent = 'Testing connection...';
+            messageDiv.className = 'message';
+            
+            try {
+                // Temporarily set the URL to test
+                const originalUrl = getApiBaseUrl();
+                setApiBaseUrl(apiUrl);
+                
+                const isConnected = await BlogAPI.testConnection();
+                
+                if (isConnected) {
+                    setApiBaseUrl(apiUrl);
+                    messageDiv.textContent = 'API connection successful!';
+                    messageDiv.className = 'message success';
+                    statusDiv.innerHTML = '<span class="token-status-ok">✅ API configured - Database mode enabled</span>';
+                    // Reload posts from API
+                    await loadPosts();
+                } else {
+                    setApiBaseUrl(originalUrl); // Restore original
+                    messageDiv.textContent = 'Connection failed. Please check your API URL and ensure the server is running.';
+                    messageDiv.className = 'message error';
+                    statusDiv.innerHTML = '';
+                }
+            } catch (error) {
+                messageDiv.textContent = `Connection error: ${error.message}`;
+                messageDiv.className = 'message error';
+                statusDiv.innerHTML = '';
+            }
+        });
+        
+        // Load saved API URL on page load
+        const savedUrl = localStorage.getItem('apiBaseUrl');
+        if (savedUrl) {
+            document.getElementById('apiBaseUrl').value = savedUrl;
+            // Test connection
+            if (typeof BlogAPI !== 'undefined') {
+                BlogAPI.testConnection().then(isConnected => {
+                    const statusDiv = document.getElementById('apiStatus');
+                    if (isConnected) {
+                        statusDiv.innerHTML = '<span class="token-status-ok">✅ API connected - Database mode enabled</span>';
+                    } else {
+                        statusDiv.innerHTML = '<span class="token-status-none">⚠️ API not reachable - Check your URL</span>';
+                    }
+                });
+            }
+        }
+    }
+
     // GitHub token form submission
     document.getElementById('githubTokenForm').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -210,8 +274,23 @@ function showSection(sectionName) {
     }
 }
 
-// Load posts from localStorage and sync with blog.json
-function loadPosts() {
+// Load posts from API or fallback to localStorage/blog.json
+async function loadPosts() {
+    // Check if API is configured and available
+    if (typeof BlogAPI !== 'undefined') {
+        try {
+            const posts = await BlogAPI.getAllPosts();
+            displayPosts(posts);
+            // Cache in localStorage for offline access
+            localStorage.setItem('blogPosts', JSON.stringify(posts));
+            return;
+        } catch (error) {
+            console.warn('API not available, falling back to localStorage/blog.json:', error);
+            // Fall through to fallback method
+        }
+    }
+    
+    // Fallback: Use localStorage and sync with blog.json (legacy method)
     let localPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
     const lastSyncTime = localStorage.getItem('lastBlogSync') || '0';
     const lastPublishTime = localStorage.getItem('lastPublishTime') || '0';
@@ -319,6 +398,43 @@ async function savePost() {
         return;
     }
 
+    const postData = {
+        title,
+        date,
+        category: category || null,
+        content
+    };
+
+    // Show loading
+    const saveBtn = document.querySelector('.btn-save');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    // Try to save to API first (if available)
+    if (typeof BlogAPI !== 'undefined') {
+        try {
+            let savedPost;
+            if (currentPostId) {
+                savedPost = await BlogAPI.updatePost(currentPostId, postData);
+            } else {
+                savedPost = await BlogAPI.createPost(postData);
+            }
+            
+            alert('✅ Post saved successfully!\n\nYour blog post is now live on your website!');
+            resetForm();
+            showSection('posts');
+            await loadPosts(); // Reload from API
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+            return;
+        } catch (error) {
+            console.warn('API save failed, falling back to GitHub/localStorage:', error);
+            // Fall through to fallback method
+        }
+    }
+    
+    // Fallback: Use localStorage and GitHub API (legacy method)
     let posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
     
     if (currentPostId) {
@@ -327,10 +443,7 @@ async function savePost() {
         if (index !== -1) {
             posts[index] = {
                 id: currentPostId,
-                title,
-                date,
-                category: category || null,
-                content
+                ...postData
             };
         }
     } else {
@@ -338,48 +451,28 @@ async function savePost() {
         const newId = posts.length > 0 ? Math.max(...posts.map(p => p.id)) + 1 : 1;
         posts.push({
             id: newId,
-            title,
-            date,
-            category: category || null,
-            content
+            ...postData
         });
     }
 
-    // Mark post with timestamp for sync tracking
-    const savedPosts = posts.map(post => {
-        if (post.id === (currentPostId || posts[posts.length - 1].id)) {
-            return { ...post, lastModified: new Date().toISOString() };
-        }
-        return post;
-    });
+    localStorage.setItem('blogPosts', JSON.stringify(posts));
+    localStorage.setItem('lastBlogSync', '0');
     
-    localStorage.setItem('blogPosts', JSON.stringify(savedPosts));
-    localStorage.setItem('lastBlogSync', '0'); // Reset sync time to preserve new post
-    
-    // Show loading
-    const saveBtn = document.querySelector('.btn-save');
-    const originalText = saveBtn.innerHTML;
     saveBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Publishing...';
-    saveBtn.disabled = true;
     
     // Try to auto-publish to GitHub
-    let publishSuccess = false;
     const token = typeof getGitHubToken !== 'undefined' ? getGitHubToken() : null;
     
     if (token && typeof publishToGitHub !== 'undefined') {
         try {
             await publishToGitHub();
-            publishSuccess = true;
-            
-            // Mark that we just published - don't sync immediately
             localStorage.setItem('lastPublishTime', Date.now().toString());
-            localStorage.setItem('lastBlogSync', '0'); // Reset sync to preserve post
+            localStorage.setItem('lastBlogSync', '0');
             
-            alert('✅ Post saved and published successfully!\n\nYour blog post is now live on your website!\n\nIt may take 1-2 minutes to appear on the main site.\n\nThe post will remain visible in admin panel.');
+            alert('✅ Post saved and published successfully!\n\nYour blog post is now live on your website!\n\nIt may take 1-2 minutes to appear on the main site.');
             
             resetForm();
             showSection('posts');
-            // Don't reload from server immediately - keep local version
             const currentPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
             displayPosts(currentPosts);
             saveBtn.innerHTML = originalText;
@@ -389,7 +482,6 @@ async function savePost() {
             console.error('Publish error:', error);
             const errorMsg = error.message || 'Unknown error';
             
-            // If token is invalid or expired, clear it
             if (errorMsg.includes('Bad credentials') || errorMsg.includes('401')) {
                 localStorage.removeItem('githubToken');
                 alert('⚠️ GitHub token is invalid or expired.\n\nPlease go to Settings and add a new token to enable auto-publish.');
@@ -412,13 +504,9 @@ async function savePost() {
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
             showSection('settings');
-            // Focus on token input
-            setTimeout(() => {
-                document.getElementById('githubToken').focus();
-            }, 500);
+            setTimeout(() => document.getElementById('githubToken').focus(), 500);
             return;
         } else {
-            // User cancelled - just save to localStorage
             alert('✅ Post saved to admin panel.\n\n💡 Add GitHub token in Settings to enable auto-publish to your live website.');
             resetForm();
             showSection('posts');
@@ -432,11 +520,32 @@ async function savePost() {
 }
 
 // Edit post
-function editPost(id) {
+async function editPost(id) {
+    // Try to fetch from API first
+    if (typeof BlogAPI !== 'undefined') {
+        try {
+            const post = await BlogAPI.getPostById(id);
+            currentPostId = id;
+            document.getElementById('postTitle').value = post.title;
+            document.getElementById('postDate').value = post.date;
+            document.getElementById('postCategory').value = post.category || '';
+            quill.root.innerHTML = post.content;
+            document.getElementById('post-form-title').textContent = 'Edit Blog Post';
+            showSection('new-post');
+            return;
+        } catch (error) {
+            console.warn('API fetch failed, using localStorage:', error);
+        }
+    }
+    
+    // Fallback: Use localStorage
     const posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
     const post = posts.find(p => p.id === id);
     
-    if (!post) return;
+    if (!post) {
+        alert('Post not found');
+        return;
+    }
 
     currentPostId = id;
     document.getElementById('postTitle').value = post.title;
@@ -449,11 +558,24 @@ function editPost(id) {
 }
 
 // Delete post
-function deletePost(id) {
+async function deletePost(id) {
     if (!confirm('Are you sure you want to delete this post?')) {
         return;
     }
 
+    // Try to delete from API first
+    if (typeof BlogAPI !== 'undefined') {
+        try {
+            await BlogAPI.deletePost(id);
+            alert('✅ Post deleted successfully!');
+            await loadPosts();
+            return;
+        } catch (error) {
+            console.warn('API delete failed, using localStorage:', error);
+        }
+    }
+    
+    // Fallback: Use localStorage and GitHub
     let posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
     posts = posts.filter(p => p.id !== id);
     localStorage.setItem('blogPosts', JSON.stringify(posts));

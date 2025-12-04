@@ -88,7 +88,27 @@
                 <h2>Settings</h2>
                 
                 <div class="settings-card">
-                    <h3>🚀 GitHub Auto-Publish</h3>
+                    <h3>🗄️ Database API Configuration</h3>
+                    <p class="settings-description">Connect to your MongoDB backend API for real-time blog management. Posts will be saved directly to the database!</p>
+                    
+                    <form id="apiConfigForm" class="settings-form">
+                        <div class="form-group">
+                            <label for="apiBaseUrl">Backend API URL</label>
+                            <input type="text" id="apiBaseUrl" placeholder="http://localhost:3001/api or https://your-backend.railway.app/api" 
+                                   value="" autocomplete="off">
+                            <small class="form-help">
+                                Enter your deployed backend API URL (e.g., Railway, Render, etc.)
+                            </small>
+                        </div>
+                        <div id="apiMessage" class="message"></div>
+                        <button type="submit" class="btn-save">Save & Test Connection</button>
+                    </form>
+                    <div id="apiStatus" class="token-status"></div>
+                </div>
+
+                <div class="settings-card">
+                    <h3>🚀 GitHub Auto-Publish (Legacy)</h3>
+                    <p class="settings-description" style="margin-bottom: 1rem;">💡 <strong>Note:</strong> If using database API above, GitHub auto-publish is not needed. Posts are saved directly to database.</p>
                     <p class="settings-description">Configure GitHub token to automatically publish blog posts directly to your website. No manual upload needed!</p>
                     
                     <div style="background: rgba(0, 238, 238, 0.1); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem; border-left: 4px solid var(--main-color);">
@@ -156,6 +176,7 @@
     <!-- Quill Editor JS -->
     <script src="https://cdn.quilljs.com/1.3.6/quill.js" onerror="console.error('Failed to load Quill.js')"></script>
     <script src="admin-auth.js" onerror="console.error('Failed to load admin-auth.js')"></script>
+    <script src="api-config.js" onerror="console.error('Failed to load api-config.js')"></script>
     <script src="github-api.js" onerror="console.error('Failed to load github-api.js')"></script>
     <script src="admin-dashboard.js" onerror="console.error('Failed to load admin-dashboard.js')"></script>
     <script>

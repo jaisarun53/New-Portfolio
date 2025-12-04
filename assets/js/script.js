@@ -32,24 +32,38 @@ async function loadBlogPosts() {
     const blogContainer = document.getElementById('blog-container');
     let posts = [];
     
-    // PRIORITY: Load from blog.json first (server file - visible to all visitors)
-    try {
-        const response = await fetch('data/blog.json');
-        const data = await response.json();
-        if (data.posts && data.posts.length > 0) {
-            posts = data.posts;
-            // Update localStorage cache for admin panel
+    // Try to load from API first (if configured)
+    if (typeof BlogAPI !== 'undefined') {
+        try {
+            posts = await BlogAPI.getAllPosts();
+            // Cache in localStorage for offline access
             localStorage.setItem('blogPosts', JSON.stringify(posts));
+        } catch (error) {
+            console.warn('API not available, falling back to blog.json:', error);
+            // Fall through to fallback
         }
-    } catch (error) {
-        console.error('Error loading blog.json:', error);
-        // Fallback: Try localStorage if blog.json fails (for local testing)
-        const storedPosts = localStorage.getItem('blogPosts');
-        if (storedPosts) {
-            try {
-                posts = JSON.parse(storedPosts);
-            } catch (e) {
-                console.error('Error parsing stored posts:', e);
+    }
+    
+    // Fallback: Load from blog.json (server file - visible to all visitors)
+    if (posts.length === 0) {
+        try {
+            const response = await fetch('data/blog.json');
+            const data = await response.json();
+            if (data.posts && data.posts.length > 0) {
+                posts = data.posts;
+                // Update localStorage cache for admin panel
+                localStorage.setItem('blogPosts', JSON.stringify(posts));
+            }
+        } catch (error) {
+            console.error('Error loading blog.json:', error);
+            // Fallback: Try localStorage if blog.json fails (for local testing)
+            const storedPosts = localStorage.getItem('blogPosts');
+            if (storedPosts) {
+                try {
+                    posts = JSON.parse(storedPosts);
+                } catch (e) {
+                    console.error('Error parsing stored posts:', e);
+                }
             }
         }
     }

@@ -253,10 +253,11 @@
       </p>
     </footer>
 
+    <script src="api-config.js"></script>
     <script>
       // Get post ID from URL
       const urlParams = new URLSearchParams(window.location.search);
-      const postId = parseInt(urlParams.get('id'));
+      const postId = urlParams.get('id'); // Keep as string for MongoDB ObjectId
 
       // Format date
       function formatDate(dateString) {
@@ -286,16 +287,35 @@
           return;
         }
 
-        try {
-          const response = await fetch('data/blog.json');
-          const data = await response.json();
-          const post = data.posts.find((p) => p.id === postId);
+        let post = null;
 
-          if (!post) {
-            container.innerHTML =
-              '<div class="error">Post not found. <a href="index.html#blog">Go back to blog</a></div>';
-            return;
+        // Try to load from API first
+        if (typeof BlogAPI !== 'undefined') {
+          try {
+            post = await BlogAPI.getPostById(postId);
+          } catch (error) {
+            console.warn('API not available, falling back to blog.json:', error);
           }
+        }
+
+        // Fallback: Load from blog.json
+        if (!post) {
+          try {
+            const response = await fetch('data/blog.json');
+            const data = await response.json();
+            // Try to find by MongoDB ID or numeric ID
+            post = data.posts.find((p) => p.id === postId || p.id === parseInt(postId));
+
+          } catch (error) {
+            console.error('Error loading post:', error);
+          }
+        }
+
+        if (!post) {
+          container.innerHTML =
+            '<div class="error">Post not found. <a href="index.html#blog">Go back to blog</a></div>';
+          return;
+        }
 
           container.innerHTML = `
             <a href="index.html#blog" class="back-to-blog">
