@@ -1,0 +1,19 @@
+{
+  "posts": [
+    {
+      "id": 2,
+      "date": "2025-01-28",
+      "title": "Building My Portfolio Website",
+      "content": "<p>Today I worked on adding a blog feature to my portfolio website. It's exciting to see how simple it can be to add dynamic content using just JSON and JavaScript.</p><p>The blog section will help me share my daily learnings and experiences with everyone who visits my site.</p>",
+      "category": "Technology"
+    },
+    {
+      "id": 1,
+      "date": "2025-01-27",
+      "title": "Welcome to My Blog",
+      "content": "<p>This is my first blog post! I'll be sharing my thoughts, experiences, and updates here regularly.</p>",
+      "category": "General"
+    }
+  ]
+}
+

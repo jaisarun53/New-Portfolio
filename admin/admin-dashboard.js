@@ -115,7 +115,7 @@ function loadPosts() {
     let posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
     
     // Always try to sync with blog.json (server file) to get latest posts
-    fetch('blog.json')
+    fetch('../data/blog.json')
         .then(response => {
             if (response.ok) {
                 return response.json();
@@ -328,7 +328,7 @@ function exportBlog() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    const instructions = `✅ blog.json downloaded!\n\n📤 TO MAKE POSTS VISIBLE ON YOUR WEBSITE:\n\n1. Go to your GitHub repository\n2. Upload the downloaded blog.json file (replace the existing one)\n3. Commit and push the changes\n4. Wait 1-2 minutes for GitHub Pages to update\n\nYour blog posts will then appear on your website!`;
+    const instructions = `✅ blog.json downloaded!\n\n📤 TO MAKE POSTS VISIBLE ON YOUR WEBSITE:\n\n1. Go to your GitHub repository\n2. Upload the downloaded blog.json file to the data/ folder (replace data/blog.json)\n3. Commit and push the changes\n4. Wait 1-2 minutes for GitHub Pages to update\n\nYour blog posts will then appear on your website!`;
     alert(instructions);
 }
 

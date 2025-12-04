@@ -34,7 +34,7 @@ async function loadBlogPosts() {
     
     // PRIORITY: Load from blog.json first (server file - visible to all visitors)
     try {
-        const response = await fetch('blog.json');
+        const response = await fetch('data/blog.json');
         const data = await response.json();
         if (data.posts && data.posts.length > 0) {
             posts = data.posts;
@@ -94,6 +94,6 @@ document.addEventListener('DOMContentLoaded', loadBlogPosts);
 // Hidden admin access shortcut (Ctrl+Shift+A)
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-        window.location.href = 'admin-login.html';
+        window.location.href = 'admin/admin-login.html';
     }
 });

@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Blog Management</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="admin-styles.css">
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-    <link rel="shortcut icon" href="images/favicon-32x32.png" type="image/x-icon">
+    <link rel="shortcut icon" href="../assets/images/favicon-32x32.png" type="image/x-icon">
     <!-- Quill Editor CSS -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 </head>
@@ -16,7 +16,7 @@
         <div class="admin-header-content">
             <h1>Blog <span>Admin Panel</span></h1>
             <div class="admin-actions">
-                <a href="index.html" class="btn-view-site" target="_blank">
+                <a href="../index.html" class="btn-view-site" target="_blank">
                     <i class="bx bx-globe"></i> View Site
                 </a>
                 <button class="btn-logout" onclick="logout()">
@@ -121,7 +121,7 @@
                 <h2>Export Blog Data</h2>
                 <div class="export-card">
                     <p>Export your blog posts as JSON file to update your website.</p>
-                    <p class="note">After exporting, upload the <code>blog.json</code> file to your server.</p>
+                    <p class="note">After exporting, upload the <code>blog.json</code> file to the <code>data/</code> folder in your repository.</p>
                     <button class="btn-export" onclick="exportBlog()">
                         <i class="bx bx-download"></i> Download blog.json
                     </button>
