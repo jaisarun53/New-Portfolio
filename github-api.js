@@ -88,9 +88,12 @@ async function publishToGitHub() {
         });
 
         if (response.ok) {
+            const result = await response.json();
+            console.log('Publish successful:', result);
             return true;
         } else {
             const error = await response.json();
+            console.error('Publish failed:', error);
             throw new Error(error.message || 'Failed to publish');
         }
     } catch (error) {

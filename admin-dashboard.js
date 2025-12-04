@@ -212,10 +212,27 @@ function showSection(sectionName) {
 
 // Load posts from localStorage and sync with blog.json
 function loadPosts() {
-    let posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+    let localPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+    const lastSyncTime = localStorage.getItem('lastBlogSync') || '0';
+    const lastPublishTime = localStorage.getItem('lastPublishTime') || '0';
+    const now = Date.now();
     
-    // Always try to sync with blog.json (server file) to get latest posts
-    fetch('data/blog.json')
+    // If we just published (within last 3 minutes), don't sync to avoid overwriting
+    const timeSincePublish = now - parseInt(lastPublishTime);
+    const justPublished = timeSincePublish < 180000; // 3 minutes
+    
+    // Only sync with server if it's been more than 2 minutes since last sync
+    // AND we haven't just published
+    const shouldSync = !justPublished && (now - parseInt(lastSyncTime)) > 120000;
+    
+    if (!shouldSync && localPosts.length > 0) {
+        // Use local posts if recently synced or just published (preserves new posts)
+        displayPosts(localPosts);
+        return;
+    }
+    
+    // Try to sync with blog.json (server file)
+    fetch('data/blog.json?' + now) // Cache bust
         .then(response => {
             if (response.ok) {
                 return response.json();
@@ -224,28 +241,30 @@ function loadPosts() {
         })
         .then(data => {
             if (data.posts && data.posts.length > 0) {
-                // Merge: Use server posts as source of truth, but keep any new local posts
+                // Smart merge: Always preserve local posts that don't exist on server
                 const serverPostIds = new Set(data.posts.map(p => p.id));
-                const localPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
                 
-                // Add any local posts that aren't on server (newly created, not yet exported)
+                // Find local posts that aren't on server (newly created, not yet on server)
                 const newLocalPosts = localPosts.filter(p => !serverPostIds.has(p.id));
+                
+                // Merge: Server posts + new local posts
                 const mergedPosts = [...data.posts, ...newLocalPosts];
                 
-                // Update localStorage with merged posts
+                // Update localStorage with merged posts (preserving new posts)
                 localStorage.setItem('blogPosts', JSON.stringify(mergedPosts));
+                localStorage.setItem('lastBlogSync', now.toString());
                 displayPosts(mergedPosts);
-            } else if (posts.length > 0) {
-                // No server posts, but have local posts
-                displayPosts(posts);
+            } else if (localPosts.length > 0) {
+                // No server posts, but have local posts - keep them
+                displayPosts(localPosts);
             } else {
                 displayPosts([]);
             }
         })
         .catch(() => {
             // blog.json not available, use localStorage only
-            if (posts.length > 0) {
-                displayPosts(posts);
+            if (localPosts.length > 0) {
+                displayPosts(localPosts);
             } else {
                 displayPosts([]);
             }
@@ -326,7 +345,16 @@ async function savePost() {
         });
     }
 
-    localStorage.setItem('blogPosts', JSON.stringify(posts));
+    // Mark post with timestamp for sync tracking
+    const savedPosts = posts.map(post => {
+        if (post.id === (currentPostId || posts[posts.length - 1].id)) {
+            return { ...post, lastModified: new Date().toISOString() };
+        }
+        return post;
+    });
+    
+    localStorage.setItem('blogPosts', JSON.stringify(savedPosts));
+    localStorage.setItem('lastBlogSync', '0'); // Reset sync time to preserve new post
     
     // Show loading
     const saveBtn = document.querySelector('.btn-save');
@@ -342,10 +370,18 @@ async function savePost() {
         try {
             await publishToGitHub();
             publishSuccess = true;
-            alert('✅ Post saved and published successfully!\n\nYour blog post is now live on your website!\n\nIt may take 1-2 minutes to appear.');
+            
+            // Mark that we just published - don't sync immediately
+            localStorage.setItem('lastPublishTime', Date.now().toString());
+            localStorage.setItem('lastBlogSync', '0'); // Reset sync to preserve post
+            
+            alert('✅ Post saved and published successfully!\n\nYour blog post is now live on your website!\n\nIt may take 1-2 minutes to appear on the main site.\n\nThe post will remain visible in admin panel.');
+            
             resetForm();
             showSection('posts');
-            loadPosts();
+            // Don't reload from server immediately - keep local version
+            const currentPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+            displayPosts(currentPosts);
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
             return;
