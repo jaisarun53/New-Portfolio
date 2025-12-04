@@ -302,48 +302,43 @@ async function savePost() {
 
     localStorage.setItem('blogPosts', JSON.stringify(posts));
     
-    // Auto-publish to GitHub
-    const token = getGitHubToken();
-    if (token) {
-        // Show loading
-        const saveBtn = document.querySelector('.btn-save');
-        const originalText = saveBtn.innerHTML;
-        saveBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Publishing...';
-        saveBtn.disabled = true;
-        
+    // Show loading
+    const saveBtn = document.querySelector('.btn-save');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Publishing...';
+    saveBtn.disabled = true;
+    
+    // Try to auto-publish to GitHub
+    const token = typeof getGitHubToken !== 'undefined' ? getGitHubToken() : null;
+    if (token && typeof publishToGitHub !== 'undefined') {
         try {
             await publishToGitHub();
             alert('✅ Post saved and published successfully!\n\nYour blog post is now live on your website!');
             resetForm();
             showSection('posts');
             loadPosts();
-        } catch (error) {
-            console.error('Publish error:', error);
-            const shouldExport = confirm(`⚠️ Auto-publish failed: ${error.message}\n\nWould you like to export blog.json manually?`);
-            if (shouldExport) {
-                resetForm();
-                showSection('export');
-                setTimeout(() => exportBlog(), 500);
-            } else {
-                resetForm();
-                showSection('posts');
-            }
-        } finally {
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
-        }
-    } else {
-        // No token configured, offer to export
-        const shouldExport = confirm('Post saved!\n\n⚠️ GitHub token not configured. To auto-publish, add your GitHub token in Settings.\n\nWould you like to export blog.json manually?');
-        if (shouldExport) {
-            resetForm();
-            showSection('export');
-            setTimeout(() => exportBlog(), 500);
-        } else {
-            resetForm();
-            showSection('posts');
+            return;
+        } catch (error) {
+            console.error('Publish error:', error);
+            // Fall through to export option
         }
     }
+    
+    // If auto-publish failed or no token, automatically export
+    saveBtn.innerHTML = '<i class="bx bx-download"></i> Exporting...';
+    
+    // Auto-export the file
+    setTimeout(() => {
+        exportBlog();
+        alert('✅ Post saved!\n\n📤 IMPORTANT: blog.json has been downloaded.\n\nTo make your post live:\n1. Go to GitHub: https://github.com/jaisarun53/New-Portfolio\n2. Navigate to data/ folder\n3. Click blog.json → Edit\n4. Replace all content with downloaded file\n5. Commit changes\n\n💡 TIP: Add GitHub token in Settings for auto-publish!');
+        resetForm();
+        showSection('posts');
+        loadPosts();
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    }, 500);
 }
 
 // Edit post
@@ -427,8 +422,8 @@ function exportBlog() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    const instructions = `✅ blog.json downloaded!\n\n📤 TO MAKE POSTS VISIBLE ON YOUR WEBSITE:\n\n1. Go to your GitHub repository\n2. Upload the downloaded blog.json file to the data/ folder (replace data/blog.json)\n3. Commit and push the changes\n4. Wait 1-2 minutes for GitHub Pages to update\n\nYour blog posts will then appear on your website!`;
-    alert(instructions);
+    // Return true to indicate export was successful
+    return true;
 }
 
 // Helper functions
