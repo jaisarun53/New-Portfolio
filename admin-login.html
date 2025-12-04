@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Arun Jaiswal</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin-styles.css">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="images/favicon-32x32.png" type="image/x-icon">
+</head>
+<body class="admin-body">
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>Admin <span>Panel</span></h1>
+                <p>Login to manage your blog</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <i class="bx bx-user"></i>
+                    <input type="text" id="username" placeholder="Username" required autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <i class="bx bx-lock-alt"></i>
+                    <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+                    <i class="bx bx-hide" id="togglePassword"></i>
+                </div>
+                <div id="errorMessage" class="error-message"></div>
+                <button type="submit" class="login-btn">
+                    <span>Login</span>
+                    <i class="bx bx-log-in"></i>
+                </button>
+            </form>
+            <div class="login-footer">
+                <p>Default credentials: admin / admin123</p>
+                <p class="note">Change password after first login</p>
+            </div>
+        </div>
+    </div>
+    <script src="admin-auth.js"></script>
+</body>
+</html>
+

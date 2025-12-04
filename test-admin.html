@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        h1 { color: #00ffee; }
+        .test-link {
+            display: block;
+            padding: 15px;
+            margin: 10px 0;
+            background: #00ffee;
+            color: #000;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .test-link:hover {
+            background: #00ccbb;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #00ff00; color: #000; }
+        .error { background: #ff4444; color: #fff; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Admin Panel Test Page</h1>
+    <p>If you can see this page, GitHub Pages is working correctly!</p>
+    
+    <div class="status success">
+        ✅ GitHub Pages is configured correctly
+    </div>
+    
+    <h2>Test Admin Panel Access:</h2>
+    <a href="admin-login.html" class="test-link">
+        → Go to Admin Login Page
+    </a>
+    
+    <a href="admin-dashboard.html" class="test-link">
+        → Go to Admin Dashboard (will redirect to login)
+    </a>
+    
+    <a href="index.html" class="test-link">
+        → Go to Main Website
+    </a>
+    
+    <h2>Quick Checklist:</h2>
+    <ul>
+        <li>✅ This test page loads = GitHub Pages works</li>
+        <li>✅ Admin login page loads = Files are deployed</li>
+        <li>✅ Can login = Admin panel is functional</li>
+    </ul>
+    
+    <p><strong>If admin-login.html gives 404:</strong></p>
+    <ol>
+        <li>Make sure all files are committed and pushed to GitHub</li>
+        <li>Check GitHub Pages settings (Settings → Pages)</li>
+        <li>Wait 1-5 minutes for deployment</li>
+        <li>Clear browser cache and try again</li>
+    </ol>
+</body>
+</html>
+
