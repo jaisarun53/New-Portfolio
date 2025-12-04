@@ -4,31 +4,59 @@ let currentPostId = null;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    initQuill();
-    loadPosts();
-    setupEventListeners();
-    setDefaultDate();
+    try {
+        // Check if we're on the dashboard page
+        if (!document.getElementById('postsList')) {
+            console.error('Dashboard elements not found');
+            return;
+        }
+        
+        initQuill();
+        loadPosts();
+        setupEventListeners();
+        setDefaultDate();
+    } catch (error) {
+        console.error('Error initializing dashboard:', error);
+        alert('Error loading admin dashboard. Please refresh the page.');
+    }
 });
 
 // Initialize Quill rich text editor
 function initQuill() {
-    quill = new Quill('#editor', {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                [{ 'script': 'sub'}, { 'script': 'super' }],
-                [{ 'indent': '-1'}, { 'indent': '+1' }],
-                [{ 'color': [] }, { 'background': [] }],
-                [{ 'align': [] }],
-                ['link', 'image', 'code-block'],
-                ['blockquote'],
-                ['clean']
-            ]
-        }
-    });
+    const editorElement = document.getElementById('editor');
+    if (!editorElement) {
+        console.warn('Editor element not found');
+        return;
+    }
+    
+    if (typeof Quill === 'undefined') {
+        console.error('Quill.js library not loaded. Please check your internet connection.');
+        editorElement.innerHTML = '<p style="color: red; padding: 2rem;">Error: Rich text editor failed to load. Please refresh the page.</p>';
+        return;
+    }
+    
+    try {
+        quill = new Quill('#editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'script': 'sub'}, { 'script': 'super' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    ['link', 'image', 'code-block'],
+                    ['blockquote'],
+                    ['clean']
+                ]
+            }
+        });
+    } catch (error) {
+        console.error('Error initializing Quill:', error);
+        editorElement.innerHTML = '<p style="color: red; padding: 2rem;">Error initializing editor. Please refresh the page.</p>';
+    }
 }
 
 // Set default date to today

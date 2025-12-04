@@ -119,7 +119,16 @@ if (document.getElementById('loginForm')) {
 }
 
 // Check authentication on protected pages
-if (window.location.pathname.includes('admin-dashboard')) {
+if (window.location.pathname.includes('admin-dashboard') || window.location.href.includes('admin-dashboard')) {
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    } else {
+        checkAuth();
+    }
+}
+
+function checkAuth() {
     if (!isAuthenticated()) {
         window.location.href = 'admin-login.html';
     } else {
