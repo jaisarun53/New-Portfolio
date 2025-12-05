@@ -101,6 +101,9 @@ function renderPosts(posts) {
             </div>
         `;
         }).join('');
+        
+        // Add copy buttons to code blocks in previews
+        addCopyButtonsToCodeBlocks();
     } else {
         blogContainer.innerHTML = '<p class="no-posts">No blog posts yet. Check back soon!</p>';
     }
@@ -119,6 +122,58 @@ function formatDate(dateString) {
     const date = new Date(dateString);
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
+}
+
+// Add copy buttons to code blocks
+function addCopyButtonsToCodeBlocks() {
+    const codeBlocks = document.querySelectorAll('.blog-content pre, .blog-preview pre');
+    codeBlocks.forEach((pre) => {
+        // Skip if button already exists
+        if (pre.querySelector('.copy-code-btn')) return;
+        
+        const code = pre.querySelector('code');
+        if (!code) return;
+        
+        const button = document.createElement('button');
+        button.className = 'copy-code-btn';
+        button.innerHTML = '<i class="bx bx-copy"></i> Copy';
+        button.setAttribute('aria-label', 'Copy code to clipboard');
+        
+        button.addEventListener('click', async () => {
+            const text = code.textContent || code.innerText;
+            try {
+                await navigator.clipboard.writeText(text);
+                button.innerHTML = '<i class="bx bx-check"></i> Copied!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.innerHTML = '<i class="bx bx-copy"></i> Copy';
+                    button.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    button.innerHTML = '<i class="bx bx-check"></i> Copied!';
+                    button.classList.add('copied');
+                    setTimeout(() => {
+                        button.innerHTML = '<i class="bx bx-copy"></i> Copy';
+                        button.classList.remove('copied');
+                    }, 2000);
+                } catch (e) {
+                    alert('Failed to copy code');
+                }
+                document.body.removeChild(textarea);
+            }
+        });
+        
+        pre.appendChild(button);
+    });
 }
 
 // Load blog posts when page loads
