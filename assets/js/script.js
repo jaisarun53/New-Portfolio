@@ -27,46 +27,58 @@ menuIcon.onclick = () =>{
     navbar.classList.toggle('active')
 }
 
-// Load blog posts
+// Load blog posts - Try API first, then fallback to JSON
 async function loadBlogPosts() {
     const blogContainer = document.getElementById('blog-container');
     let posts = [];
     
-    // Try to load from API first (if configured)
-    if (typeof BlogAPI !== 'undefined') {
+    // Try API first if configured (for admin users)
+    const apiUrl = localStorage.getItem('apiBaseUrl');
+    if (apiUrl && typeof fetchPostsFromAPI !== 'undefined') {
         try {
-            posts = await BlogAPI.getAllPosts();
-            // Cache in localStorage for offline access
-            localStorage.setItem('blogPosts', JSON.stringify(posts));
+            posts = await fetchPostsFromAPI();
+            if (posts && posts.length > 0) {
+                // Update localStorage cache
+                localStorage.setItem('blogPosts', JSON.stringify(posts));
+                renderPosts(posts);
+                return;
+            }
         } catch (error) {
-            console.warn('API not available, falling back to blog.json:', error);
-            // Fall through to fallback
+            console.error('API load error:', error);
+            // Fall through to JSON fallback
         }
     }
     
     // Fallback: Load from blog.json (server file - visible to all visitors)
-    if (posts.length === 0) {
-        try {
-            const response = await fetch('data/blog.json');
-            const data = await response.json();
-            if (data.posts && data.posts.length > 0) {
-                posts = data.posts;
-                // Update localStorage cache for admin panel
-                localStorage.setItem('blogPosts', JSON.stringify(posts));
-            }
-        } catch (error) {
-            console.error('Error loading blog.json:', error);
-            // Fallback: Try localStorage if blog.json fails (for local testing)
-            const storedPosts = localStorage.getItem('blogPosts');
-            if (storedPosts) {
-                try {
-                    posts = JSON.parse(storedPosts);
-                } catch (e) {
-                    console.error('Error parsing stored posts:', e);
-                }
+    try {
+        const response = await fetch('data/blog.json');
+        const data = await response.json();
+        if (data.posts && data.posts.length > 0) {
+            posts = data.posts;
+            // Update localStorage cache for admin panel
+            localStorage.setItem('blogPosts', JSON.stringify(posts));
+        }
+    } catch (error) {
+        console.error('Error loading blog.json:', error);
+        // Fallback: Try localStorage if blog.json fails (for local testing)
+        const storedPosts = localStorage.getItem('blogPosts');
+        if (storedPosts) {
+            try {
+                posts = JSON.parse(storedPosts);
+            } catch (e) {
+                console.error('Error parsing stored posts:', e);
             }
         }
     }
+    
+    renderPosts(posts);
+}
+
+// Render posts to the page
+function renderPosts(posts) {
+    const blogContainer = document.getElementById('blog-container');
+    
+    if (!blogContainer) return;
     
     if (posts.length > 0) {
         // Sort posts by date (newest first)

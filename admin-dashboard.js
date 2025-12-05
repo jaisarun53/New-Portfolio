@@ -29,9 +29,21 @@ function initQuill() {
         return;
     }
     
+    // Wait for Quill to load if not available yet
     if (typeof Quill === 'undefined') {
-        console.error('Quill.js library not loaded. Please check your internet connection.');
-        editorElement.innerHTML = '<p style="color: red; padding: 2rem;">Error: Rich text editor failed to load. Please refresh the page.</p>';
+        console.warn('Quill.js not loaded yet, waiting...');
+        let attempts = 0;
+        const checkQuill = setInterval(function() {
+            attempts++;
+            if (typeof Quill !== 'undefined') {
+                clearInterval(checkQuill);
+                initQuill(); // Retry initialization
+            } else if (attempts > 20) { // Wait up to 2 seconds
+                clearInterval(checkQuill);
+                console.error('Quill.js library not loaded. Please check your internet connection.');
+                editorElement.innerHTML = '<p style="color: red; padding: 2rem;">Error: Rich text editor failed to load. Please check your internet connection and refresh the page.</p>';
+            }
+        }, 100);
         return;
     }
     
@@ -53,6 +65,7 @@ function initQuill() {
                 ]
             }
         });
+        console.log('Quill editor initialized successfully');
     } catch (error) {
         console.error('Error initializing Quill:', error);
         editorElement.innerHTML = '<p style="color: red; padding: 2rem;">Error initializing editor. Please refresh the page.</p>';
@@ -116,7 +129,7 @@ function setupEventListeners() {
         }
     });
 
-    // API config form submission
+    // API configuration form submission
     const apiConfigForm = document.getElementById('apiConfigForm');
     if (apiConfigForm) {
         apiConfigForm.addEventListener('submit', async function(e) {
@@ -131,52 +144,55 @@ function setupEventListeners() {
                 return;
             }
 
-            // Test connection
+            // Save and test
+            if (typeof saveApiBaseUrl !== 'undefined') {
+                saveApiBaseUrl(apiUrl);
+            } else {
+                localStorage.setItem('apiBaseUrl', apiUrl);
+            }
+
             messageDiv.textContent = 'Testing connection...';
             messageDiv.className = 'message';
-            
+
             try {
-                // Temporarily set the URL to test
-                const originalUrl = getApiBaseUrl();
-                setApiBaseUrl(apiUrl);
-                
-                const isConnected = await BlogAPI.testConnection();
-                
-                if (isConnected) {
-                    setApiBaseUrl(apiUrl);
-                    messageDiv.textContent = 'API connection successful!';
-                    messageDiv.className = 'message success';
-                    statusDiv.innerHTML = '<span class="token-status-ok">✅ API configured - Database mode enabled</span>';
-                    // Reload posts from API
-                    await loadPosts();
+                if (typeof testApiConnection === 'function') {
+                    const result = await testApiConnection();
+                    if (result && result.success) {
+                        messageDiv.textContent = '✅ API connection successful!';
+                        messageDiv.className = 'message success';
+                        statusDiv.innerHTML = '<span class="token-status-ok">✅ Database API connected - Posts will be saved to MongoDB</span>';
+                        loadApiStatus();
+                    } else {
+                        messageDiv.textContent = `❌ Connection failed: ${result ? result.error : 'Unknown error'}`;
+                        messageDiv.className = 'message error';
+                        statusDiv.innerHTML = '';
+                    }
                 } else {
-                    setApiBaseUrl(originalUrl); // Restore original
-                    messageDiv.textContent = 'Connection failed. Please check your API URL and ensure the server is running.';
-                    messageDiv.className = 'message error';
-                    statusDiv.innerHTML = '';
+                    // Fallback test
+                    const response = await fetch(`${apiUrl}/api/health`);
+                    if (response.ok) {
+                        messageDiv.textContent = '✅ API connection successful!';
+                        messageDiv.className = 'message success';
+                        statusDiv.innerHTML = '<span class="token-status-ok">✅ Database API connected</span>';
+                        loadApiStatus();
+                    } else {
+                        messageDiv.textContent = '❌ Connection failed';
+                        messageDiv.className = 'message error';
+                    }
                 }
             } catch (error) {
-                messageDiv.textContent = `Connection error: ${error.message}`;
+                messageDiv.textContent = `❌ Connection failed: ${error.message}`;
                 messageDiv.className = 'message error';
                 statusDiv.innerHTML = '';
             }
         });
-        
-        // Load saved API URL on page load
+    }
+
+    // Load API URL on page load
+    if (document.getElementById('apiBaseUrl')) {
         const savedUrl = localStorage.getItem('apiBaseUrl');
         if (savedUrl) {
             document.getElementById('apiBaseUrl').value = savedUrl;
-            // Test connection
-            if (typeof BlogAPI !== 'undefined') {
-                BlogAPI.testConnection().then(isConnected => {
-                    const statusDiv = document.getElementById('apiStatus');
-                    if (isConnected) {
-                        statusDiv.innerHTML = '<span class="token-status-ok">✅ API connected - Database mode enabled</span>';
-                    } else {
-                        statusDiv.innerHTML = '<span class="token-status-none">⚠️ API not reachable - Check your URL</span>';
-                    }
-                });
-            }
         }
     }
 
@@ -214,11 +230,25 @@ function setupEventListeners() {
 
     // Load token status on page load
     loadTokenStatus();
+    loadApiStatus();
+}
+
+// Load and display API status
+function loadApiStatus() {
+    const apiUrl = localStorage.getItem('apiBaseUrl');
+    const statusDiv = document.getElementById('apiStatus');
+    if (!statusDiv) return;
+    
+    if (apiUrl) {
+        statusDiv.innerHTML = '<span class="token-status-ok">✅ Database API configured</span>';
+    } else {
+        statusDiv.innerHTML = '<span class="token-status-none">⚠️ Database API not configured - Add API URL to use MongoDB</span>';
+    }
 }
 
 // Load and display token status
 function loadTokenStatus() {
-    const token = typeof getGitHubToken !== 'undefined' ? getGitHubToken() : null;
+    const token = typeof getGitHubToken === 'function' ? getGitHubToken() : null;
     const statusDiv = document.getElementById('tokenStatus');
     if (token) {
         statusDiv.innerHTML = '<span class="token-status-ok">✅ Auto-publish enabled - Posts will go live automatically!</span>';
@@ -274,23 +304,27 @@ function showSection(sectionName) {
     }
 }
 
-// Load posts from API or fallback to localStorage/blog.json
+// Load posts - Try API first, then fallback to GitHub/localStorage
 async function loadPosts() {
-    // Check if API is configured and available
-    if (typeof BlogAPI !== 'undefined') {
+    const apiUrl = localStorage.getItem('apiBaseUrl');
+    
+    // Try API first if configured
+    if (apiUrl && typeof fetchPostsFromAPI === 'function') {
         try {
-            const posts = await BlogAPI.getAllPosts();
-            displayPosts(posts);
-            // Cache in localStorage for offline access
-            localStorage.setItem('blogPosts', JSON.stringify(posts));
-            return;
+            const posts = await fetchPostsFromAPI();
+            if (posts && Array.isArray(posts)) {
+                // Update localStorage cache
+                localStorage.setItem('blogPosts', JSON.stringify(posts));
+                displayPosts(posts);
+                return;
+            }
         } catch (error) {
-            console.warn('API not available, falling back to localStorage/blog.json:', error);
-            // Fall through to fallback method
+            console.warn('API load error (falling back to local storage):', error);
+            // Fall through to fallback methods
         }
     }
     
-    // Fallback: Use localStorage and sync with blog.json (legacy method)
+    // Fallback: Use existing GitHub/localStorage method
     let localPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
     const lastSyncTime = localStorage.getItem('lastBlogSync') || '0';
     const lastPublishTime = localStorage.getItem('lastPublishTime') || '0';
@@ -386,8 +420,13 @@ function displayPosts(posts) {
     `).join('');
 }
 
-// Save post (create or update)
+// Save post (create or update) - Try API first, then GitHub fallback
 async function savePost() {
+    if (!quill) {
+        alert('Editor not initialized. Please refresh the page.');
+        return;
+    }
+    
     const title = document.getElementById('postTitle').value.trim();
     const date = document.getElementById('postDate').value;
     const category = document.getElementById('postCategory').value.trim();
@@ -398,6 +437,12 @@ async function savePost() {
         return;
     }
 
+    // Show loading
+    const saveBtn = document.querySelector('.btn-save');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Publishing...';
+    saveBtn.disabled = true;
+
     const postData = {
         title,
         date,
@@ -405,36 +450,36 @@ async function savePost() {
         content
     };
 
-    // Show loading
-    const saveBtn = document.querySelector('.btn-save');
-    const originalText = saveBtn.innerHTML;
-    saveBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Saving...';
-    saveBtn.disabled = true;
-    
-    // Try to save to API first (if available)
-    if (typeof BlogAPI !== 'undefined') {
+    // Try API first if configured
+    const apiUrl = localStorage.getItem('apiBaseUrl');
+    if (apiUrl && typeof createPostInAPI === 'function' && typeof updatePostInAPI === 'function') {
         try {
             let savedPost;
             if (currentPostId) {
-                savedPost = await BlogAPI.updatePost(currentPostId, postData);
+                // Update existing post
+                savedPost = await updatePostInAPI(currentPostId, postData);
             } else {
-                savedPost = await BlogAPI.createPost(postData);
+                // Create new post
+                savedPost = await createPostInAPI(postData);
             }
             
-            alert('✅ Post saved successfully!\n\nYour blog post is now live on your website!');
-            resetForm();
-            showSection('posts');
-            await loadPosts(); // Reload from API
-            saveBtn.innerHTML = originalText;
-            saveBtn.disabled = false;
-            return;
+            if (savedPost) {
+                alert('✅ Post saved to database successfully!\n\nYour blog post is now live on your website!');
+                
+                resetForm();
+                showSection('posts');
+                loadPosts(); // Reload from API
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+                return;
+            }
         } catch (error) {
-            console.warn('API save failed, falling back to GitHub/localStorage:', error);
-            // Fall through to fallback method
+            console.warn('API save error (falling back to GitHub/localStorage):', error);
+            // Fall through to GitHub/localStorage method
         }
     }
     
-    // Fallback: Use localStorage and GitHub API (legacy method)
+    // Fallback: Use GitHub/localStorage method
     let posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
     
     if (currentPostId) {
@@ -458,12 +503,10 @@ async function savePost() {
     localStorage.setItem('blogPosts', JSON.stringify(posts));
     localStorage.setItem('lastBlogSync', '0');
     
-    saveBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Publishing...';
-    
     // Try to auto-publish to GitHub
-    const token = typeof getGitHubToken !== 'undefined' ? getGitHubToken() : null;
+    const token = typeof getGitHubToken === 'function' ? getGitHubToken() : null;
     
-    if (token && typeof publishToGitHub !== 'undefined') {
+    if (token && typeof publishToGitHub === 'function') {
         try {
             await publishToGitHub();
             localStorage.setItem('lastPublishTime', Date.now().toString());
@@ -488,7 +531,7 @@ async function savePost() {
                 showSection('settings');
                 setTimeout(() => document.getElementById('githubToken').focus(), 500);
             } else {
-                alert(`⚠️ Auto-publish failed: ${errorMsg}\n\nPlease check your token in Settings or try again.`);
+                alert(`⚠️ Auto-publish failed: ${errorMsg}\n\nPost saved locally. Please check your token in Settings.`);
             }
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
@@ -498,16 +541,23 @@ async function savePost() {
     
     // If no token, guide to setup
     if (!token) {
-        const setupToken = confirm('🚀 Enable Auto-Publish!\n\nTo publish posts directly to your website:\n1. Click OK to go to Settings\n2. Add your GitHub Personal Access Token\n3. Posts will auto-publish when you save!\n\nClick OK to set up now.');
+        const setupToken = confirm('🚀 Enable Auto-Publish!\n\nTo publish posts directly to your website:\n1. Click OK to go to Settings\n2. Add your GitHub Personal Access Token OR Database API URL\n3. Posts will auto-publish when you save!\n\nClick OK to set up now.');
         
         if (setupToken) {
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
             showSection('settings');
-            setTimeout(() => document.getElementById('githubToken').focus(), 500);
+            setTimeout(() => {
+                const apiInput = document.getElementById('apiBaseUrl');
+                if (apiInput && !apiInput.value) {
+                    apiInput.focus();
+                } else {
+                    document.getElementById('githubToken').focus();
+                }
+            }, 500);
             return;
         } else {
-            alert('✅ Post saved to admin panel.\n\n💡 Add GitHub token in Settings to enable auto-publish to your live website.');
+            alert('✅ Post saved to admin panel.\n\n💡 Add Database API URL or GitHub token in Settings to enable auto-publish.');
             resetForm();
             showSection('posts');
             const currentPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
@@ -519,22 +569,26 @@ async function savePost() {
     }
 }
 
-// Edit post
+// Edit post - Try to fetch from API if available
 async function editPost(id) {
-    // Try to fetch from API first
-    if (typeof BlogAPI !== 'undefined') {
+    // Try API first if configured
+    const apiUrl = localStorage.getItem('apiBaseUrl');
+    if (apiUrl && typeof fetchPostById === 'function') {
         try {
-            const post = await BlogAPI.getPostById(id);
-            currentPostId = id;
-            document.getElementById('postTitle').value = post.title;
-            document.getElementById('postDate').value = post.date;
-            document.getElementById('postCategory').value = post.category || '';
-            quill.root.innerHTML = post.content;
-            document.getElementById('post-form-title').textContent = 'Edit Blog Post';
-            showSection('new-post');
-            return;
+            const post = await fetchPostById(id);
+            if (post) {
+                currentPostId = post.id;
+                document.getElementById('postTitle').value = post.title;
+                document.getElementById('postDate').value = post.date;
+                document.getElementById('postCategory').value = post.category || '';
+                quill.root.innerHTML = post.content;
+                document.getElementById('post-form-title').textContent = 'Edit Blog Post';
+                showSection('new-post');
+                return;
+            }
         } catch (error) {
-            console.warn('API fetch failed, using localStorage:', error);
+            console.warn('API fetch error (falling back to localStorage):', error);
+            // Fall through to localStorage
         }
     }
     
@@ -557,34 +611,37 @@ async function editPost(id) {
     showSection('new-post');
 }
 
-// Delete post
+// Delete post - Try API first, then GitHub fallback
 async function deletePost(id) {
-    if (!confirm('Are you sure you want to delete this post?')) {
+    const posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+    const post = posts.find(p => p.id === id);
+    
+    if (!confirm(`Are you sure you want to delete "${post?.title || 'this post'}"?`)) {
         return;
     }
 
-    // Try to delete from API first
-    if (typeof BlogAPI !== 'undefined') {
+    // Try API first if configured
+    const apiUrl = localStorage.getItem('apiBaseUrl');
+    if (apiUrl && typeof deletePostFromAPI === 'function') {
         try {
-            await BlogAPI.deletePost(id);
-            alert('✅ Post deleted successfully!');
-            await loadPosts();
+            await deletePostFromAPI(id);
+            alert('✅ Post deleted from database successfully!');
+            loadPosts(); // Reload from API
             return;
         } catch (error) {
-            console.warn('API delete failed, using localStorage:', error);
+            console.warn('API delete error (falling back to local delete):', error);
+            // Fall through to local delete
         }
     }
     
-    // Fallback: Use localStorage and GitHub
-    let posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
-    posts = posts.filter(p => p.id !== id);
-    localStorage.setItem('blogPosts', JSON.stringify(posts));
-    
+    // Fallback: Local delete and GitHub publish
+    const updatedPosts = posts.filter(p => p.id !== id);
+    localStorage.setItem('blogPosts', JSON.stringify(updatedPosts));
     loadPosts();
     
     // If token exists, try to auto-publish the updated list
-    const token = typeof getGitHubToken !== 'undefined' ? getGitHubToken() : null;
-    if (token && typeof publishToGitHub !== 'undefined') {
+    const token = typeof getGitHubToken === 'function' ? getGitHubToken() : null;
+    if (token && typeof publishToGitHub === 'function') {
         try {
             await publishToGitHub();
             alert('✅ Post deleted and changes published!\n\nYour website will update in 1-2 minutes.');

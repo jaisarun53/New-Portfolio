@@ -4,7 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -44,16 +44,28 @@ const blogPostSchema = new mongoose.Schema({
     },
     category: {
         type: String,
+        trim: true,
         default: null
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
     }
 }, {
-    timestamps: true // Adds createdAt and updatedAt automatically
+    timestamps: true
 });
 
-// Create model
+// Create indexes for better query performance
+blogPostSchema.index({ date: -1 });
+blogPostSchema.index({ createdAt: -1 });
+
 const BlogPost = mongoose.model('BlogPost', blogPostSchema);
 
-// API Routes
+// Routes
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -64,28 +76,30 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Get all blog posts
+// Get all blog posts (sorted by date, newest first)
 app.get('/api/posts', async (req, res) => {
     try {
         const posts = await BlogPost.find({})
-            .sort({ date: -1 }) // Newest first
-            .lean(); // Convert to plain JavaScript objects
+            .sort({ date: -1, createdAt: -1 })
+            .lean();
         
-        res.json({
-            success: true,
-            posts: posts.map(post => ({
-                id: post._id.toString(),
-                title: post.title,
-                content: post.content,
-                date: post.date.toISOString().split('T')[0], // Format as YYYY-MM-DD
-                category: post.category || null
-            }))
-        });
+        // Convert MongoDB _id to id and format dates
+        const formattedPosts = posts.map(post => ({
+            id: post._id.toString(),
+            title: post.title,
+            content: post.content,
+            date: post.date.toISOString().split('T')[0],
+            category: post.category,
+            createdAt: post.createdAt,
+            updatedAt: post.updatedAt
+        }));
+        
+        res.json({ posts: formattedPosts });
     } catch (error) {
         console.error('Error fetching posts:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch blog posts'
+        res.status(500).json({ 
+            error: 'Failed to fetch blog posts',
+            message: error.message 
         });
     }
 });
@@ -96,27 +110,25 @@ app.get('/api/posts/:id', async (req, res) => {
         const post = await BlogPost.findById(req.params.id).lean();
         
         if (!post) {
-            return res.status(404).json({
-                success: false,
-                error: 'Post not found'
-            });
+            return res.status(404).json({ error: 'Blog post not found' });
         }
         
-        res.json({
-            success: true,
-            post: {
-                id: post._id.toString(),
-                title: post.title,
-                content: post.content,
-                date: post.date.toISOString().split('T')[0],
-                category: post.category || null
-            }
-        });
+        const formattedPost = {
+            id: post._id.toString(),
+            title: post.title,
+            content: post.content,
+            date: post.date.toISOString().split('T')[0],
+            category: post.category,
+            createdAt: post.createdAt,
+            updatedAt: post.updatedAt
+        };
+        
+        res.json({ post: formattedPost });
     } catch (error) {
         console.error('Error fetching post:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch blog post'
+        res.status(500).json({ 
+            error: 'Failed to fetch blog post',
+            message: error.message 
         });
     }
 });
@@ -128,36 +140,39 @@ app.post('/api/posts', async (req, res) => {
         
         // Validation
         if (!title || !content) {
-            return res.status(400).json({
-                success: false,
-                error: 'Title and content are required'
+            return res.status(400).json({ 
+                error: 'Title and content are required' 
             });
         }
         
-        const post = new BlogPost({
+        const newPost = new BlogPost({
             title: title.trim(),
             content: content,
             date: date ? new Date(date) : new Date(),
-            category: category || null
+            category: category ? category.trim() : null
         });
         
-        const savedPost = await post.save();
+        const savedPost = await newPost.save();
         
-        res.status(201).json({
-            success: true,
-            post: {
-                id: savedPost._id.toString(),
-                title: savedPost.title,
-                content: savedPost.content,
-                date: savedPost.date.toISOString().split('T')[0],
-                category: savedPost.category || null
-            }
+        const formattedPost = {
+            id: savedPost._id.toString(),
+            title: savedPost.title,
+            content: savedPost.content,
+            date: savedPost.date.toISOString().split('T')[0],
+            category: savedPost.category,
+            createdAt: savedPost.createdAt,
+            updatedAt: savedPost.updatedAt
+        };
+        
+        res.status(201).json({ 
+            message: 'Blog post created successfully',
+            post: formattedPost 
         });
     } catch (error) {
         console.error('Error creating post:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to create blog post'
+        res.status(500).json({ 
+            error: 'Failed to create blog post',
+            message: error.message 
         });
     }
 });
@@ -169,45 +184,48 @@ app.put('/api/posts/:id', async (req, res) => {
         
         // Validation
         if (!title || !content) {
-            return res.status(400).json({
-                success: false,
-                error: 'Title and content are required'
+            return res.status(400).json({ 
+                error: 'Title and content are required' 
             });
         }
         
-        const post = await BlogPost.findByIdAndUpdate(
+        const updateData = {
+            title: title.trim(),
+            content: content,
+            date: date ? new Date(date) : new Date(),
+            category: category ? category.trim() : null,
+            updatedAt: new Date()
+        };
+        
+        const updatedPost = await BlogPost.findByIdAndUpdate(
             req.params.id,
-            {
-                title: title.trim(),
-                content: content,
-                date: date ? new Date(date) : new Date(),
-                category: category || null
-            },
+            updateData,
             { new: true, runValidators: true }
         ).lean();
         
-        if (!post) {
-            return res.status(404).json({
-                success: false,
-                error: 'Post not found'
-            });
+        if (!updatedPost) {
+            return res.status(404).json({ error: 'Blog post not found' });
         }
         
-        res.json({
-            success: true,
-            post: {
-                id: post._id.toString(),
-                title: post.title,
-                content: post.content,
-                date: post.date.toISOString().split('T')[0],
-                category: post.category || null
-            }
+        const formattedPost = {
+            id: updatedPost._id.toString(),
+            title: updatedPost.title,
+            content: updatedPost.content,
+            date: updatedPost.date.toISOString().split('T')[0],
+            category: updatedPost.category,
+            createdAt: updatedPost.createdAt,
+            updatedAt: updatedPost.updatedAt
+        };
+        
+        res.json({ 
+            message: 'Blog post updated successfully',
+            post: formattedPost 
         });
     } catch (error) {
         console.error('Error updating post:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to update blog post'
+        res.status(500).json({ 
+            error: 'Failed to update blog post',
+            message: error.message 
         });
     }
 });
@@ -215,31 +233,46 @@ app.put('/api/posts/:id', async (req, res) => {
 // Delete blog post
 app.delete('/api/posts/:id', async (req, res) => {
     try {
-        const post = await BlogPost.findByIdAndDelete(req.params.id);
+        const deletedPost = await BlogPost.findByIdAndDelete(req.params.id).lean();
         
-        if (!post) {
-            return res.status(404).json({
-                success: false,
-                error: 'Post not found'
-            });
+        if (!deletedPost) {
+            return res.status(404).json({ error: 'Blog post not found' });
         }
         
-        res.json({
-            success: true,
-            message: 'Post deleted successfully'
+        res.json({ 
+            message: 'Blog post deleted successfully',
+            post: {
+                id: deletedPost._id.toString(),
+                title: deletedPost.title
+            }
         });
     } catch (error) {
         console.error('Error deleting post:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to delete blog post'
+        res.status(500).json({ 
+            error: 'Failed to delete blog post',
+            message: error.message 
         });
     }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({ 
+        error: 'Internal server error',
+        message: err.message 
+    });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ error: 'Route not found' });
 });
 
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📝 API available at http://localhost:${PORT}/api`);
+    console.log(`📍 API endpoint: http://localhost:${PORT}/api`);
+    console.log(`💡 Health check: http://localhost:${PORT}/api/health`);
 });
 

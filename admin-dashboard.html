@@ -89,15 +89,28 @@
                 
                 <div class="settings-card">
                     <h3>🗄️ Database API Configuration</h3>
-                    <p class="settings-description">Connect to your MongoDB backend API for real-time blog management. Posts will be saved directly to the database!</p>
+                    <p class="settings-description">Configure your backend API URL to connect to MongoDB database.</p>
+                    
+                    <div style="background: rgba(0, 238, 238, 0.1); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem; border-left: 4px solid var(--main-color);">
+                        <strong style="color: var(--main-color);">Setup Steps:</strong>
+                        <ol style="margin: 1rem 0 0 0; padding-left: 2rem; font-size: 1.4rem; line-height: 2;">
+                            <li>Deploy backend to Railway/Render/Vercel</li>
+                            <li>Set up MongoDB Atlas (free tier)</li>
+                            <li>Add MongoDB connection string to backend</li>
+                            <li>Enter your backend API URL below</li>
+                        </ol>
+                        <p style="margin-top: 1rem; font-size: 1.3rem;">
+                            <strong>Example:</strong> <code style="background: var(--bg-color); padding: 0.2rem 0.5rem; border-radius: 0.3rem;">https://your-app.railway.app</code>
+                        </p>
+                    </div>
                     
                     <form id="apiConfigForm" class="settings-form">
                         <div class="form-group">
                             <label for="apiBaseUrl">Backend API URL</label>
-                            <input type="text" id="apiBaseUrl" placeholder="http://localhost:3001/api or https://your-backend.railway.app/api" 
+                            <input type="text" id="apiBaseUrl" placeholder="https://your-app.railway.app or http://localhost:3000" 
                                    value="" autocomplete="off">
                             <small class="form-help">
-                                Enter your deployed backend API URL (e.g., Railway, Render, etc.)
+                                Enter your deployed backend URL or use <code>http://localhost:3000</code> for local development
                             </small>
                         </div>
                         <div id="apiMessage" class="message"></div>
@@ -108,7 +121,7 @@
 
                 <div class="settings-card">
                     <h3>🚀 GitHub Auto-Publish (Legacy)</h3>
-                    <p class="settings-description" style="margin-bottom: 1rem;">💡 <strong>Note:</strong> If using database API above, GitHub auto-publish is not needed. Posts are saved directly to database.</p>
+                    <p class="note" style="margin-bottom: 15px;">💡 <strong>Note:</strong> If using database API, GitHub auto-publish is not needed. Posts are saved directly to database.</p>
                     <p class="settings-description">Configure GitHub token to automatically publish blog posts directly to your website. No manual upload needed!</p>
                     
                     <div style="background: rgba(0, 238, 238, 0.1); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem; border-left: 4px solid var(--main-color);">
@@ -173,21 +186,49 @@
         </div>
     </div>
 
-    <!-- Quill Editor JS -->
-    <script src="https://cdn.quilljs.com/1.3.6/quill.js" onerror="console.error('Failed to load Quill.js')"></script>
-    <script src="admin-auth.js" onerror="console.error('Failed to load admin-auth.js')"></script>
-    <script src="api-config.js" onerror="console.error('Failed to load api-config.js')"></script>
-    <script src="github-api.js" onerror="console.error('Failed to load github-api.js')"></script>
-    <script src="admin-dashboard.js" onerror="console.error('Failed to load admin-dashboard.js')"></script>
+    <!-- Quill Editor JS with fallback -->
+    <script>
+        // Load Quill.js with fallback
+        function loadQuill() {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
+            script.onerror = function() {
+                // Fallback CDN
+                console.warn('Primary Quill CDN failed, trying fallback...');
+                const fallback = document.createElement('script');
+                fallback.src = 'https://cdn.jsdelivr.net/npm/quill@1.3.6/dist/quill.js';
+                fallback.onerror = function() {
+                    console.error('All Quill.js CDNs failed. Please check your internet connection.');
+                    const editor = document.getElementById('editor');
+                    if (editor) {
+                        editor.innerHTML = '<p style="color: red; padding: 2rem;">Error: Rich text editor failed to load. Please check your internet connection and refresh the page.</p>';
+                    }
+                };
+                document.head.appendChild(fallback);
+            };
+            document.head.appendChild(script);
+        }
+        loadQuill();
+    </script>
+    <script src="admin-auth.js"></script>
+    <script src="blog-api.js"></script>
+    <script src="github-api.js"></script>
+    <script src="admin-dashboard.js"></script>
     <script>
         // Check if all scripts loaded
         window.addEventListener('load', function() {
-            if (typeof quill === 'undefined' && document.getElementById('editor')) {
-                console.error('Quill.js failed to load. Please check your internet connection.');
-            }
-            if (typeof isAuthenticated === 'undefined') {
-                console.error('Admin auth scripts failed to load. Please refresh the page.');
-            }
+            setTimeout(function() {
+                if (typeof Quill === 'undefined' && document.getElementById('editor')) {
+                    console.error('Quill.js failed to load. Please check your internet connection.');
+                    const editor = document.getElementById('editor');
+                    if (editor && !editor.querySelector('p')) {
+                        editor.innerHTML = '<p style="color: red; padding: 2rem;">Error: Rich text editor failed to load. Please check your internet connection and refresh the page.</p>';
+                    }
+                }
+                if (typeof isAuthenticated === 'undefined') {
+                    console.error('Admin auth scripts failed to load. Please refresh the page.');
+                }
+            }, 1000); // Wait 1 second for scripts to load
         });
     </script>
 </body>
