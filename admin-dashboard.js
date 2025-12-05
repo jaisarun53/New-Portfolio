@@ -532,51 +532,64 @@ async function savePost() {
                     text: content
                 });
             }
-        
-        // Process only regular content (not code blocks)
-        const processedParts = parts.map(part => {
-            if (part.type === 'code') {
-                // Preserve code blocks exactly as-is
-                return part.text;
-            } else {
-                // Process regular content
-                let processed = part.text;
-                
-                // Auto-fix common visibility issues: replace black text colors with white
-                // This ensures HTML content is visible on dark background
-                processed = processed.replace(/color:\s*black/gi, 'color: white');
-                processed = processed.replace(/color:\s*#000(?!\d)/gi, 'color: white');
-                processed = processed.replace(/color:\s*#000000/gi, 'color: white');
-                processed = processed.replace(/color:\s*rgb\(0,\s*0,\s*0\)/gi, 'color: white');
-                processed = processed.replace(/color:\s*rgba\(0,\s*0,\s*0,\s*[^)]+\)/gi, 'color: white');
-                
-                // Remove white/light backgrounds that cause glare on dark website
-                processed = processed.replace(/background:\s*white/gi, 'background: transparent');
-                processed = processed.replace(/background:\s*#fff(?!\d)/gi, 'background: transparent');
-                processed = processed.replace(/background:\s*#ffffff/gi, 'background: transparent');
-                processed = processed.replace(/background:\s*rgb\(255,\s*255,\s*255\)/gi, 'background: transparent');
-                processed = processed.replace(/background-color:\s*white/gi, 'background-color: transparent');
-                processed = processed.replace(/background-color:\s*#fff(?!\d)/gi, 'background-color: transparent');
-                processed = processed.replace(/background-color:\s*#ffffff/gi, 'background-color: transparent');
-                processed = processed.replace(/background-color:\s*rgb\(255,\s*255,\s*255\)/gi, 'background-color: transparent');
-                
-                // Also fix any style attributes with black colors and white backgrounds
-                processed = processed.replace(/style="([^"]*)"/gi, 
-                    (match, styles) => {
-                        let fixedStyles = styles;
-                        // Fix black text colors
-                        fixedStyles = fixedStyles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white');
-                        // Fix white backgrounds
-                        fixedStyles = fixedStyles.replace(/background(?:-color)?:\s*(?:white|#fff|#ffffff|rgb\(255,\s*255,\s*255\))/gi, 'background: transparent');
-                        return `style="${fixedStyles}"`;
-                    });
-                
-                return processed;
-            }
-        });
-        
-        // Reassemble content
-        content = processedParts.join('');
+            
+            // Process only regular content (not code blocks)
+            const processedParts = parts.map(part => {
+                if (part.type === 'code') {
+                    // Preserve code blocks exactly as-is
+                    return part.text;
+                } else {
+                    // Process regular content
+                    let processed = part.text;
+                    
+                    // Auto-fix common visibility issues: replace black text colors with white
+                    // This ensures HTML content is visible on dark background
+                    processed = processed.replace(/color:\s*black/gi, 'color: white');
+                    processed = processed.replace(/color:\s*#000(?!\d)/gi, 'color: white');
+                    processed = processed.replace(/color:\s*#000000/gi, 'color: white');
+                    processed = processed.replace(/color:\s*rgb\(0,\s*0,\s*0\)/gi, 'color: white');
+                    processed = processed.replace(/color:\s*rgba\(0,\s*0,\s*0,\s*[^)]+\)/gi, 'color: white');
+                    
+                    // Remove white/light backgrounds that cause glare on dark website
+                    processed = processed.replace(/background:\s*white/gi, 'background: transparent');
+                    processed = processed.replace(/background:\s*#fff(?!\d)/gi, 'background: transparent');
+                    processed = processed.replace(/background:\s*#ffffff/gi, 'background: transparent');
+                    processed = processed.replace(/background:\s*rgb\(255,\s*255,\s*255\)/gi, 'background: transparent');
+                    processed = processed.replace(/background-color:\s*white/gi, 'background-color: transparent');
+                    processed = processed.replace(/background-color:\s*#fff(?!\d)/gi, 'background-color: transparent');
+                    processed = processed.replace(/background-color:\s*#ffffff/gi, 'background-color: transparent');
+                    processed = processed.replace(/background-color:\s*rgb\(255,\s*255,\s*255\)/gi, 'background-color: transparent');
+                    
+                    // Also fix any style attributes with black colors and white backgrounds
+                    processed = processed.replace(/style="([^"]*)"/gi, 
+                        (match, styles) => {
+                            let fixedStyles = styles;
+                            // Fix black text colors
+                            fixedStyles = fixedStyles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white');
+                            // Fix white backgrounds
+                            fixedStyles = fixedStyles.replace(/background(?:-color)?:\s*(?:white|#fff|#ffffff|rgb\(255,\s*255,\s*255\))/gi, 'background: transparent');
+                            return `style="${fixedStyles}"`;
+                        });
+                    
+                    return processed;
+                }
+            });
+            
+            // Reassemble content
+            content = processedParts.join('');
+        } catch (error) {
+            // If code block processing fails, just use the original content
+            // and apply basic fixes (safer fallback)
+            console.warn('Code block processing failed, using fallback:', error);
+            // Apply only style attribute fixes (safer)
+            content = content.replace(/style="([^"]*)"/gi, 
+                (match, styles) => {
+                    let fixedStyles = styles;
+                    fixedStyles = fixedStyles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white');
+                    fixedStyles = fixedStyles.replace(/background(?:-color)?:\s*(?:white|#fff|#ffffff|rgb\(255,\s*255,\s*255\))/gi, 'background: transparent');
+                    return `style="${fixedStyles}"`;
+                });
+        }
     } else {
         // Visual Editor mode - get content from Quill
         if (!quill) {
