@@ -64,6 +64,9 @@
         color: var(--text-color) !important;
         margin-bottom: 4rem;
         text-align: left;
+        background: var(--bg-color);
+        padding: 2rem;
+        border-radius: 1rem;
       }
       
       /* Force white text for all HTML elements in blog post content (except headings, links, code) */
@@ -103,6 +106,36 @@
       .blog-post-content [style*="color: rgb(0,0,0)"],
       .blog-post-content [style*="color:rgb(0,0,0)"] {
         color: var(--text-color) !important;
+      }
+      
+      /* Force dark backgrounds - remove white/light backgrounds from HTML content */
+      .blog-post-content * {
+        background-color: transparent !important;
+      }
+      
+      .blog-post-content div,
+      .blog-post-content section,
+      .blog-post-content article,
+      .blog-post-content p,
+      .blog-post-content span,
+      .blog-post-content table,
+      .blog-post-content td,
+      .blog-post-content th {
+        background-color: transparent !important;
+      }
+      
+      /* Override white/light backgrounds in inline styles */
+      .blog-post-content [style*="background: white"],
+      .blog-post-content [style*="background:#fff"],
+      .blog-post-content [style*="background:#ffffff"],
+      .blog-post-content [style*="background: rgb(255, 255, 255)"],
+      .blog-post-content [style*="background-color: white"],
+      .blog-post-content [style*="background-color:#fff"],
+      .blog-post-content [style*="background-color:#ffffff"],
+      .blog-post-content [style*="background-color: rgb(255, 255, 255)"],
+      .blog-post-content [style*="background-color:rgb(255,255,255)"] {
+        background-color: transparent !important;
+        background: transparent !important;
       }
       
       /* Enhanced readability for blog post content */

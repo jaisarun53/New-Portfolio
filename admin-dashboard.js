@@ -489,10 +489,25 @@ async function savePost() {
         content = content.replace(/color:\s*rgb\(0,\s*0,\s*0\)/gi, 'color: white');
         content = content.replace(/color:\s*rgba\(0,\s*0,\s*0,\s*[^)]+\)/gi, 'color: white');
         
-        // Also fix any style attributes with black colors
-        content = content.replace(/style="([^"]*color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))[^"]*)"/gi, 
+        // Remove white/light backgrounds that cause glare on dark website
+        content = content.replace(/background:\s*white/gi, 'background: transparent');
+        content = content.replace(/background:\s*#fff(?!\d)/gi, 'background: transparent');
+        content = content.replace(/background:\s*#ffffff/gi, 'background: transparent');
+        content = content.replace(/background:\s*rgb\(255,\s*255,\s*255\)/gi, 'background: transparent');
+        content = content.replace(/background-color:\s*white/gi, 'background-color: transparent');
+        content = content.replace(/background-color:\s*#fff(?!\d)/gi, 'background-color: transparent');
+        content = content.replace(/background-color:\s*#ffffff/gi, 'background-color: transparent');
+        content = content.replace(/background-color:\s*rgb\(255,\s*255,\s*255\)/gi, 'background-color: transparent');
+        
+        // Also fix any style attributes with black colors and white backgrounds
+        content = content.replace(/style="([^"]*)"/gi, 
             (match, styles) => {
-                return `style="${styles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white')}"`;
+                let fixedStyles = styles;
+                // Fix black text colors
+                fixedStyles = fixedStyles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white');
+                // Fix white backgrounds
+                fixedStyles = fixedStyles.replace(/background(?:-color)?:\s*(?:white|#fff|#ffffff|rgb\(255,\s*255,\s*255\))/gi, 'background: transparent');
+                return `style="${fixedStyles}"`;
             });
     } else {
         // Visual Editor mode - get content from Quill

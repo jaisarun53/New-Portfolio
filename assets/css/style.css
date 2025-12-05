@@ -542,6 +542,7 @@ span {
   line-height: 1.8;
   text-align: justify;
   font-weight: 400;
+  background: transparent;
 }
 
 /* Force white text for all HTML elements in blog content to ensure visibility on dark background */
@@ -579,6 +580,32 @@ span {
 .blog-content [style*="color: rgb(0, 0, 0)"],
 .blog-content [style*="color: rgb(0,0,0)"] {
   color: var(--text-color) !important;
+}
+
+/* Force dark backgrounds - override white/light backgrounds in HTML content */
+.blog-content * {
+  background-color: transparent !important;
+}
+
+.blog-content div,
+.blog-content section,
+.blog-content article,
+.blog-content p,
+.blog-content span {
+  background-color: transparent !important;
+}
+
+/* Override white/light backgrounds in inline styles */
+.blog-content [style*="background: white"],
+.blog-content [style*="background:#fff"],
+.blog-content [style*="background:#ffffff"],
+.blog-content [style*="background: rgb(255, 255, 255)"],
+.blog-content [style*="background-color: white"],
+.blog-content [style*="background-color:#fff"],
+.blog-content [style*="background-color:#ffffff"],
+.blog-content [style*="background-color: rgb(255, 255, 255)"] {
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
 .blog-preview {
