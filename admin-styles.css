@@ -453,6 +453,7 @@
     color: var(--text-color);
     resize: vertical;
     line-height: 1.6;
+    display: none;
 }
 
 #htmlEditor:focus {

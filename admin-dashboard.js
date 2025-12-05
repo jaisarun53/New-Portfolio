@@ -431,19 +431,24 @@ function switchEditorMode(mode) {
     const editor = document.getElementById('editor');
     const htmlEditor = document.getElementById('htmlEditor');
     
+    if (!editor || !htmlEditor) {
+        console.error('Editor elements not found');
+        return;
+    }
+    
     if (mode === 'visual') {
-        visualBtn.classList.add('active');
-        htmlBtn.classList.remove('active');
+        if (visualBtn) visualBtn.classList.add('active');
+        if (htmlBtn) htmlBtn.classList.remove('active');
         editor.style.display = 'block';
         htmlEditor.style.display = 'none';
         
         // Sync HTML to Quill if HTML editor had content
-        if (htmlEditor && htmlEditor.value.trim() && quill) {
+        if (htmlEditor.value.trim() && quill) {
             quill.root.innerHTML = htmlEditor.value.trim();
         }
     } else {
-        visualBtn.classList.remove('active');
-        htmlBtn.classList.add('active');
+        if (visualBtn) visualBtn.classList.remove('active');
+        if (htmlBtn) htmlBtn.classList.add('active');
         editor.style.display = 'none';
         htmlEditor.style.display = 'block';
         
@@ -451,6 +456,9 @@ function switchEditorMode(mode) {
         if (quill && quill.root.innerHTML) {
             htmlEditor.value = quill.root.innerHTML;
         }
+        
+        // Focus on HTML editor
+        htmlEditor.focus();
     }
 }
 
@@ -703,7 +711,12 @@ async function deletePost(id) {
     }
     
     // Fallback: Local delete and GitHub publish
-    const updatedPosts = posts.filter(p => p.id !== id);
+    // Handle both string and number ID matching when filtering
+    const updatedPosts = posts.filter(p => {
+        const pId = typeof p.id === 'string' ? p.id : String(p.id);
+        const searchId = typeof id === 'string' ? id : String(id);
+        return pId !== searchId && p.id !== id;
+    });
     localStorage.setItem('blogPosts', JSON.stringify(updatedPosts));
     loadPosts();
     
@@ -715,8 +728,10 @@ async function deletePost(id) {
             alert('✅ Post deleted and changes published!\n\nYour website will update in 1-2 minutes.');
         } catch (error) {
             console.error('Publish error:', error);
-            // Silent fail - post is deleted locally
+            alert('✅ Post deleted locally!\n\n⚠️ Auto-publish failed. Post removed from admin panel.');
         }
+    } else {
+        alert('✅ Post deleted from admin panel!\n\n💡 Add Database API URL or GitHub token in Settings to enable auto-publish.');
     }
 }
 
