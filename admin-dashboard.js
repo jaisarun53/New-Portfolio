@@ -483,42 +483,55 @@ async function savePost() {
         
         // IMPORTANT: Preserve code blocks - don't modify content inside <pre> or <code> tags
         // Split content into parts: code blocks and regular content
-        const codeBlockRegex = /(<pre[^>]*>[\s\S]*?<\/pre>|<code[^>]*>[\s\S]*?<\/code>)/gi;
-        const parts = [];
-        let lastIndex = 0;
-        let match;
-        
-        // Extract code blocks and regular content separately
-        while ((match = codeBlockRegex.exec(content)) !== null) {
-            // Add content before code block
-            if (match.index > lastIndex) {
-                parts.push({
-                    type: 'content',
-                    text: content.substring(lastIndex, match.index)
+        try {
+            const codeBlockRegex = /(<pre[^>]*>[\s\S]*?<\/pre>|<code[^>]*>[\s\S]*?<\/code>)/gi;
+            const parts = [];
+            let lastIndex = 0;
+            let match;
+            const matches = [];
+            
+            // First, collect all matches (avoiding regex.exec() infinite loop issues)
+            let regex = /(<pre[^>]*>[\s\S]*?<\/pre>|<code[^>]*>[\s\S]*?<\/code>)/gi;
+            let tempMatch;
+            while ((tempMatch = regex.exec(content)) !== null) {
+                matches.push({
+                    index: tempMatch.index,
+                    text: tempMatch[0]
                 });
             }
-            // Add code block (preserved as-is)
-            parts.push({
-                type: 'code',
-                text: match[0]
-            });
-            lastIndex = match.index + match[0].length;
-        }
-        // Add remaining content after last code block
-        if (lastIndex < content.length) {
-            parts.push({
-                type: 'content',
-                text: content.substring(lastIndex)
-            });
-        }
-        
-        // If no code blocks found, treat entire content as regular content
-        if (parts.length === 0) {
-            parts.push({
-                type: 'content',
-                text: content
-            });
-        }
+            
+            // Process matches
+            for (let i = 0; i < matches.length; i++) {
+                match = matches[i];
+                // Add content before code block
+                if (match.index > lastIndex) {
+                    parts.push({
+                        type: 'content',
+                        text: content.substring(lastIndex, match.index)
+                    });
+                }
+                // Add code block (preserved as-is)
+                parts.push({
+                    type: 'code',
+                    text: match.text
+                });
+                lastIndex = match.index + match.text.length;
+            }
+            // Add remaining content after last code block
+            if (lastIndex < content.length) {
+                parts.push({
+                    type: 'content',
+                    text: content.substring(lastIndex)
+                });
+            }
+            
+            // If no code blocks found, treat entire content as regular content
+            if (parts.length === 0) {
+                parts.push({
+                    type: 'content',
+                    text: content
+                });
+            }
         
         // Process only regular content (not code blocks)
         const processedParts = parts.map(part => {
