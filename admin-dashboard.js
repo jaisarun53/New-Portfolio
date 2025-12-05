@@ -321,82 +321,118 @@ function showSection(sectionName) {
 
 // Load posts - Try API first, then fallback to GitHub/localStorage
 async function loadPosts() {
+    // CRITICAL: Check if we just saved a post - protect it from being overwritten
+    const lastSaveTime = localStorage.getItem('lastSaveTime') || '0';
+    const lastPublishTime = localStorage.getItem('lastPublishTime') || '0';
+    const now = Date.now();
+    const timeSinceSave = now - parseInt(lastSaveTime);
+    const timeSincePublish = now - parseInt(lastPublishTime);
+    
+    // If we just saved/published (within last 10 minutes), NEVER sync from server
+    // This prevents posts from disappearing
+    const justSaved = timeSinceSave < 600000; // 10 minutes
+    const justPublished = timeSincePublish < 600000; // 10 minutes
+    
+    if (justSaved || justPublished) {
+        // Use local posts immediately - don't risk overwriting
+        const localPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+        if (localPosts.length > 0) {
+            displayPosts(localPosts);
+            console.log('Using local posts (recently saved - protected from overwrite)');
+            return;
+        }
+    }
+    
     const apiUrl = localStorage.getItem('apiBaseUrl');
     
     // Try API first if configured
     if (apiUrl && typeof fetchPostsFromAPI === 'function') {
         try {
             const posts = await fetchPostsFromAPI();
+            // CRITICAL: Only use API posts if they exist AND we haven't just saved
             if (posts && Array.isArray(posts) && posts.length > 0) {
-                // Update localStorage cache
-                localStorage.setItem('blogPosts', JSON.stringify(posts));
-                displayPosts(posts);
-                return;
+                // Smart merge: Preserve local posts that don't exist in API
+                const localPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+                const apiPostIds = new Set(posts.map(p => String(p.id)));
+                
+                // Find local posts not in API (newly created, not yet synced)
+                const newLocalPosts = localPosts.filter(p => !apiPostIds.has(String(p.id)));
+                
+                // Merge: API posts + new local posts
+                const mergedPosts = [...posts, ...newLocalPosts];
+                
+                // Only update if we have merged posts or if API has posts we don't have locally
+                if (mergedPosts.length > 0 || (posts.length > 0 && !justSaved)) {
+                    localStorage.setItem('blogPosts', JSON.stringify(mergedPosts));
+                    displayPosts(mergedPosts);
+                    return;
+                }
             }
+            // If API returns empty or error, fall through to use local posts
         } catch (error) {
             console.warn('API load error (falling back to local storage):', error);
-            // Fall through to fallback methods
+            // Fall through to use local posts
         }
     }
     
     // Fallback: Use existing GitHub/localStorage method
     let localPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
     const lastSyncTime = localStorage.getItem('lastBlogSync') || '0';
-    const lastPublishTime = localStorage.getItem('lastPublishTime') || '0';
-    const now = Date.now();
     
-    // If we just published (within last 3 minutes), don't sync to avoid overwriting
-    const timeSincePublish = now - parseInt(lastPublishTime);
-    const justPublished = timeSincePublish < 180000; // 3 minutes
-    
-    // Only sync with server if it's been more than 2 minutes since last sync
-    // AND we haven't just published
-    const shouldSync = !justPublished && (now - parseInt(lastSyncTime)) > 120000;
+    // Only sync with server if:
+    // 1. We haven't just saved/published (10 minute protection)
+    // 2. It's been more than 5 minutes since last sync
+    const shouldSync = !justSaved && !justPublished && (now - parseInt(lastSyncTime)) > 300000; // 5 minutes
     
     if (!shouldSync && localPosts.length > 0) {
-        // Use local posts if recently synced or just published (preserves new posts)
+        // Use local posts if recently synced or just saved (preserves new posts)
         displayPosts(localPosts);
         return;
     }
     
-    // Try to sync with blog.json (server file)
-    fetch('data/blog.json?' + now) // Cache bust
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('blog.json not found');
-        })
-        .then(data => {
-            if (data.posts && data.posts.length > 0) {
-                // Smart merge: Always preserve local posts that don't exist on server
-                const serverPostIds = new Set(data.posts.map(p => p.id));
-                
-                // Find local posts that aren't on server (newly created, not yet on server)
-                const newLocalPosts = localPosts.filter(p => !serverPostIds.has(p.id));
-                
-                // Merge: Server posts + new local posts
-                const mergedPosts = [...data.posts, ...newLocalPosts];
-                
-                // Update localStorage with merged posts (preserving new posts)
-                localStorage.setItem('blogPosts', JSON.stringify(mergedPosts));
-                localStorage.setItem('lastBlogSync', now.toString());
-                displayPosts(mergedPosts);
-            } else if (localPosts.length > 0) {
-                // No server posts, but have local posts - keep them
-                displayPosts(localPosts);
-            } else {
-                displayPosts([]);
-            }
-        })
-        .catch(() => {
-            // blog.json not available, use localStorage only
-            if (localPosts.length > 0) {
-                displayPosts(localPosts);
-            } else {
-                displayPosts([]);
-            }
-        });
+    // Try to sync with blog.json (server file) - but only if safe
+    if (!justSaved && !justPublished) {
+        fetch('data/blog.json?' + now) // Cache bust
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('blog.json not found');
+            })
+            .then(data => {
+                if (data.posts && data.posts.length > 0) {
+                    // Smart merge: Always preserve local posts that don't exist on server
+                    const serverPostIds = new Set(data.posts.map(p => String(p.id)));
+                    
+                    // Find local posts that aren't on server (newly created, not yet on server)
+                    const newLocalPosts = localPosts.filter(p => !serverPostIds.has(String(p.id)));
+                    
+                    // Merge: Server posts + new local posts
+                    const mergedPosts = [...data.posts, ...newLocalPosts];
+                    
+                    // Update localStorage with merged posts (preserving new posts)
+                    localStorage.setItem('blogPosts', JSON.stringify(mergedPosts));
+                    localStorage.setItem('lastBlogSync', now.toString());
+                    displayPosts(mergedPosts);
+                } else if (localPosts.length > 0) {
+                    // No server posts, but have local posts - keep them
+                    displayPosts(localPosts);
+                } else {
+                    displayPosts([]);
+                }
+            })
+            .catch(() => {
+                // blog.json not available, use localStorage only
+                if (localPosts.length > 0) {
+                    displayPosts(localPosts);
+                } else {
+                    displayPosts([]);
+                }
+            });
+    } else {
+        // Just saved - use local posts only
+        displayPosts(localPosts);
+    }
 }
 
 // Display posts in the list
@@ -725,11 +761,27 @@ async function savePost() {
             }
             
             if (savedPost) {
+                // Update localStorage with the saved post from API
+                const currentPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+                const existingIndex = currentPosts.findIndex(p => String(p.id) === String(savedPost.id));
+                if (existingIndex >= 0) {
+                    currentPosts[existingIndex] = savedPost;
+                } else {
+                    currentPosts.push(savedPost);
+                }
+                localStorage.setItem('blogPosts', JSON.stringify(currentPosts));
+                
+                // Set protection flags
+                const now = Date.now();
+                localStorage.setItem('lastSaveTime', now.toString());
+                localStorage.setItem('lastPublishTime', now.toString());
+                
                 alert('✅ Post saved to database successfully!\n\nYour blog post is now live on your website!');
                 
+                // Display from localStorage immediately (don't call loadPosts which might overwrite)
+                displayPosts(currentPosts);
                 resetForm();
                 showSection('posts');
-                loadPosts(); // Reload from API
                 saveBtn.innerHTML = originalText;
                 saveBtn.disabled = false;
                 return;
@@ -765,8 +817,10 @@ async function savePost() {
     localStorage.setItem('blogPosts', JSON.stringify(posts));
     localStorage.setItem('lastBlogSync', '0');
     
-    // IMPORTANT: Set a flag to prevent immediate sync that might overwrite the new post
-    localStorage.setItem('lastPublishTime', Date.now().toString());
+    // CRITICAL: Set flags to prevent sync that might overwrite the new post
+    const now = Date.now();
+    localStorage.setItem('lastSaveTime', now.toString()); // Track when we saved (10 min protection)
+    localStorage.setItem('lastPublishTime', now.toString()); // Track when we published
     
     // Try to auto-publish to GitHub
     const token = typeof getGitHubToken === 'function' ? getGitHubToken() : null;
@@ -774,15 +828,20 @@ async function savePost() {
     if (token && typeof publishToGitHub === 'function') {
         try {
             await publishToGitHub();
-            localStorage.setItem('lastPublishTime', Date.now().toString());
+            
+            // Update protection flags
+            const now = Date.now();
+            localStorage.setItem('lastSaveTime', now.toString());
+            localStorage.setItem('lastPublishTime', now.toString());
             localStorage.setItem('lastBlogSync', '0');
             
             alert('✅ Post saved and published successfully!\n\nYour blog post is now live on your website!\n\nIt may take 1-2 minutes to appear on the main site.');
             
-            resetForm();
-            showSection('posts');
+            // Display from localStorage immediately (don't call loadPosts which might overwrite)
             const currentPosts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
             displayPosts(currentPosts);
+            resetForm();
+            showSection('posts');
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
             return;
@@ -822,6 +881,10 @@ async function savePost() {
             }, 500);
             return;
         } else {
+            // Set protection flags even without publishing
+            const now = Date.now();
+            localStorage.setItem('lastSaveTime', now.toString());
+            
             alert('✅ Post saved to admin panel.\n\n💡 Add Database API URL or GitHub token in Settings to enable auto-publish.');
             resetForm();
             showSection('posts');
