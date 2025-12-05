@@ -312,7 +312,7 @@ async function loadPosts() {
     if (apiUrl && typeof fetchPostsFromAPI === 'function') {
         try {
             const posts = await fetchPostsFromAPI();
-            if (posts && Array.isArray(posts)) {
+            if (posts && Array.isArray(posts) && posts.length > 0) {
                 // Update localStorage cache
                 localStorage.setItem('blogPosts', JSON.stringify(posts));
                 displayPosts(posts);
@@ -396,15 +396,18 @@ function displayPosts(posts) {
     // Sort by date (newest first)
     posts.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    postsList.innerHTML = posts.map(post => `
+    postsList.innerHTML = posts.map(post => {
+        // Ensure ID is properly quoted for JavaScript (handles both string and number IDs)
+        const postId = typeof post.id === 'string' ? `'${post.id.replace(/'/g, "\\'")}'` : post.id;
+        return `
         <div class="post-card">
             <div class="post-card-header">
                 <h3>${escapeHtml(post.title)}</h3>
                 <div class="post-actions">
-                    <button class="btn-edit" onclick="editPost(${post.id})" title="Edit">
+                    <button class="btn-edit" onclick="editPost(${postId})" title="Edit">
                         <i class="bx bx-edit"></i>
                     </button>
-                    <button class="btn-delete" onclick="deletePost(${post.id})" title="Delete">
+                    <button class="btn-delete" onclick="deletePost(${postId})" title="Delete">
                         <i class="bx bx-trash"></i>
                     </button>
                 </div>
@@ -417,7 +420,8 @@ function displayPosts(posts) {
                 <div class="post-preview">${truncateHtml(post.content, 150)}</div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // Save post (create or update) - Try API first, then GitHub fallback
@@ -594,7 +598,12 @@ async function editPost(id) {
     
     // Fallback: Use localStorage
     const posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
-    const post = posts.find(p => p.id === id);
+    // Handle both string and number ID matching
+    const post = posts.find(p => {
+        const pId = typeof p.id === 'string' ? p.id : String(p.id);
+        const searchId = typeof id === 'string' ? id : String(id);
+        return pId === searchId || p.id === id;
+    });
     
     if (!post) {
         alert('Post not found');
@@ -614,7 +623,12 @@ async function editPost(id) {
 // Delete post - Try API first, then GitHub fallback
 async function deletePost(id) {
     const posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
-    const post = posts.find(p => p.id === id);
+    // Handle both string and number ID matching
+    const post = posts.find(p => {
+        const pId = typeof p.id === 'string' ? p.id : String(p.id);
+        const searchId = typeof id === 'string' ? id : String(id);
+        return pId === searchId || p.id === id;
+    });
     
     if (!confirm(`Are you sure you want to delete "${post?.title || 'this post'}"?`)) {
         return;

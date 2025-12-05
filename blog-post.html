@@ -255,9 +255,11 @@
 
     <script src="blog-api.js"></script>
     <script>
-      // Get post ID from URL
+      // Get post ID from URL (handle both string MongoDB IDs and numeric IDs)
       const urlParams = new URLSearchParams(window.location.search);
-      const postId = parseInt(urlParams.get('id'));
+      const rawId = urlParams.get('id');
+      // Try parsing as number first (for JSON-based posts), fallback to string (for MongoDB)
+      const postId = rawId ? (isNaN(rawId) ? rawId : parseInt(rawId)) : null;
 
       // Format date
       function formatDate(dateString) {
@@ -291,7 +293,7 @@
 
         // Try API first if configured
         const apiUrl = localStorage.getItem('apiBaseUrl');
-        if (apiUrl && typeof fetchPostById !== 'undefined') {
+        if (apiUrl && typeof fetchPostById === 'function') {
           try {
             post = await fetchPostById(postId);
           } catch (error) {
@@ -305,7 +307,12 @@
           try {
             const response = await fetch('data/blog.json');
             const data = await response.json();
-            post = data.posts.find((p) => p.id === postId);
+            // Handle both string and number ID matching
+            post = data.posts.find((p) => {
+              const pId = typeof p.id === 'string' ? p.id : String(p.id);
+              const searchId = typeof postId === 'string' ? postId : String(postId);
+              return pId === searchId || p.id === postId;
+            });
           } catch (error) {
             console.error('JSON fetch error:', error);
           }
