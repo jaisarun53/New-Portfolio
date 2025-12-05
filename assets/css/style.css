@@ -538,10 +538,47 @@ span {
 }
 .blog-content {
   font-size: 1.6rem;
-  color: var(--text-color);
+  color: var(--text-color) !important;
   line-height: 1.8;
   text-align: justify;
   font-weight: 400;
+}
+
+/* Force white text for all HTML elements in blog content to ensure visibility on dark background */
+.blog-content *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(a):not(code):not(.blog-content h1):not(.blog-content h2):not(.blog-content h3):not(.blog-content h4):not(.blog-content h5):not(.blog-content h6) {
+  color: var(--text-color) !important;
+}
+
+/* Override any inline styles that set text to black or dark colors */
+.blog-content p,
+.blog-content div,
+.blog-content span,
+.blog-content section,
+.blog-content article,
+.blog-content li,
+.blog-content td,
+.blog-content th,
+.blog-content label {
+  color: var(--text-color) !important;
+}
+
+/* Ensure headings are visible but styled with main color */
+.blog-content h1,
+.blog-content h2,
+.blog-content h3,
+.blog-content h4,
+.blog-content h5,
+.blog-content h6 {
+  color: var(--main-color) !important;
+}
+
+/* Override any style attributes with black colors */
+.blog-content [style*="color: black"],
+.blog-content [style*="color:#000"],
+.blog-content [style*="color:#000000"],
+.blog-content [style*="color: rgb(0, 0, 0)"],
+.blog-content [style*="color: rgb(0,0,0)"] {
+  color: var(--text-color) !important;
 }
 
 .blog-preview {

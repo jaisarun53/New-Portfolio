@@ -61,9 +61,48 @@
       .blog-post-content {
         font-size: 1.8rem;
         line-height: 2;
-        color: var(--text-color);
+        color: var(--text-color) !important;
         margin-bottom: 4rem;
         text-align: left;
+      }
+      
+      /* Force white text for all HTML elements in blog post content (except headings, links, code) */
+      .blog-post-content *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(a):not(code):not(pre) {
+        color: var(--text-color) !important;
+      }
+      
+      /* Override any inline styles that set text to black or dark colors */
+      .blog-post-content p,
+      .blog-post-content div,
+      .blog-post-content span,
+      .blog-post-content section,
+      .blog-post-content article,
+      .blog-post-content li,
+      .blog-post-content td,
+      .blog-post-content th,
+      .blog-post-content label,
+      .blog-post-content small {
+        color: var(--text-color) !important;
+      }
+      
+      /* Ensure headings use main color */
+      .blog-post-content h1,
+      .blog-post-content h2,
+      .blog-post-content h3,
+      .blog-post-content h4,
+      .blog-post-content h5,
+      .blog-post-content h6 {
+        color: var(--main-color) !important;
+      }
+      
+      /* Override any inline style attributes with black colors */
+      .blog-post-content [style*="color: black"],
+      .blog-post-content [style*="color:#000"],
+      .blog-post-content [style*="color:#000000"],
+      .blog-post-content [style*="color: rgb(0, 0, 0)"],
+      .blog-post-content [style*="color: rgb(0,0,0)"],
+      .blog-post-content [style*="color:rgb(0,0,0)"] {
+        color: var(--text-color) !important;
       }
       
       /* Enhanced readability for blog post content */

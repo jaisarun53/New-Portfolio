@@ -480,6 +480,20 @@ async function savePost() {
             alert('Please enter HTML content');
             return;
         }
+        
+        // Auto-fix common visibility issues: replace black text colors with white
+        // This ensures HTML content is visible on dark background
+        content = content.replace(/color:\s*black/gi, 'color: white');
+        content = content.replace(/color:\s*#000(?!\d)/gi, 'color: white');
+        content = content.replace(/color:\s*#000000/gi, 'color: white');
+        content = content.replace(/color:\s*rgb\(0,\s*0,\s*0\)/gi, 'color: white');
+        content = content.replace(/color:\s*rgba\(0,\s*0,\s*0,\s*[^)]+\)/gi, 'color: white');
+        
+        // Also fix any style attributes with black colors
+        content = content.replace(/style="([^"]*color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))[^"]*)"/gi, 
+            (match, styles) => {
+                return `style="${styles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white')}"`;
+            });
     } else {
         // Visual Editor mode - get content from Quill
         if (!quill) {
