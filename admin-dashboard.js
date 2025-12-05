@@ -578,17 +578,77 @@ async function savePost() {
             // Reassemble content
             content = processedParts.join('');
         } catch (error) {
-            // If code block processing fails, just use the original content
-            // and apply basic fixes (safer fallback)
-            console.warn('Code block processing failed, using fallback:', error);
-            // Apply only style attribute fixes (safer)
-            content = content.replace(/style="([^"]*)"/gi, 
-                (match, styles) => {
-                    let fixedStyles = styles;
-                    fixedStyles = fixedStyles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white');
-                    fixedStyles = fixedStyles.replace(/background(?:-color)?:\s*(?:white|#fff|#ffffff|rgb\(255,\s*255,\s*255\))/gi, 'background: transparent');
-                    return `style="${fixedStyles}"`;
+            // If code block processing fails, preserve code blocks by using a simpler approach
+            // that only modifies content outside of <pre> and <code> tags
+            console.warn('Code block processing failed, using safe fallback:', error);
+            
+            // Split content into code blocks and regular content using a simpler method
+            const codeBlockPattern = /(<pre[^>]*>[\s\S]*?<\/pre>|<code[^>]*>[\s\S]*?<\/code>)/gi;
+            const parts = [];
+            let lastIndex = 0;
+            let match;
+            
+            // Collect all code blocks first
+            const codeBlocks = [];
+            const regex = new RegExp(codeBlockPattern);
+            while ((match = regex.exec(content)) !== null) {
+                codeBlocks.push({
+                    index: match.index,
+                    endIndex: match.index + match[0].length,
+                    text: match[0]
                 });
+            }
+            
+            // Process content in segments, preserving code blocks
+            for (let i = 0; i < codeBlocks.length; i++) {
+                const codeBlock = codeBlocks[i];
+                
+                // Add content before code block and process it
+                if (codeBlock.index > lastIndex) {
+                    let segment = content.substring(lastIndex, codeBlock.index);
+                    // Apply style fixes only to this segment (outside code blocks)
+                    segment = segment.replace(/style="([^"]*)"/gi, 
+                        (match, styles) => {
+                            let fixedStyles = styles;
+                            fixedStyles = fixedStyles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white');
+                            fixedStyles = fixedStyles.replace(/background(?:-color)?:\s*(?:white|#fff|#ffffff|rgb\(255,\s*255,\s*255\))/gi, 'background: transparent');
+                            return `style="${fixedStyles}"`;
+                        });
+                    parts.push(segment);
+                }
+                
+                // Add code block exactly as-is (no modifications)
+                parts.push(codeBlock.text);
+                lastIndex = codeBlock.endIndex;
+            }
+            
+            // Add remaining content after last code block and process it
+            if (lastIndex < content.length) {
+                let segment = content.substring(lastIndex);
+                // Apply style fixes only to this segment (outside code blocks)
+                segment = segment.replace(/style="([^"]*)"/gi, 
+                    (match, styles) => {
+                        let fixedStyles = styles;
+                        fixedStyles = fixedStyles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white');
+                        fixedStyles = fixedStyles.replace(/background(?:-color)?:\s*(?:white|#fff|#ffffff|rgb\(255,\s*255,\s*255\))/gi, 'background: transparent');
+                        return `style="${fixedStyles}"`;
+                    });
+                parts.push(segment);
+            }
+            
+            // If no code blocks found, process entire content
+            if (codeBlocks.length === 0) {
+                content = content.replace(/style="([^"]*)"/gi, 
+                    (match, styles) => {
+                        let fixedStyles = styles;
+                        fixedStyles = fixedStyles.replace(/color:\s*(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))/gi, 'color: white');
+                        fixedStyles = fixedStyles.replace(/background(?:-color)?:\s*(?:white|#fff|#ffffff|rgb\(255,\s*255,\s*255\))/gi, 'background: transparent');
+                        return `style="${fixedStyles}"`;
+                    });
+            } else {
+                // Reassemble: processed segments + preserved code blocks
+                content = parts.join('');
+            }
         }
     } else {
         // Visual Editor mode - get content from Quill
