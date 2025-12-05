@@ -424,19 +424,64 @@ function displayPosts(posts) {
     }).join('');
 }
 
+// Switch between Visual Editor and HTML Code modes
+function switchEditorMode(mode) {
+    const visualBtn = document.querySelector('[data-mode="visual"]');
+    const htmlBtn = document.querySelector('[data-mode="html"]');
+    const editor = document.getElementById('editor');
+    const htmlEditor = document.getElementById('htmlEditor');
+    
+    if (mode === 'visual') {
+        visualBtn.classList.add('active');
+        htmlBtn.classList.remove('active');
+        editor.style.display = 'block';
+        htmlEditor.style.display = 'none';
+        
+        // Sync HTML to Quill if HTML editor had content
+        if (htmlEditor && htmlEditor.value.trim() && quill) {
+            quill.root.innerHTML = htmlEditor.value.trim();
+        }
+    } else {
+        visualBtn.classList.remove('active');
+        htmlBtn.classList.add('active');
+        editor.style.display = 'none';
+        htmlEditor.style.display = 'block';
+        
+        // Sync Quill content to HTML editor
+        if (quill && quill.root.innerHTML) {
+            htmlEditor.value = quill.root.innerHTML;
+        }
+    }
+}
+
 // Save post (create or update) - Try API first, then GitHub fallback
 async function savePost() {
-    if (!quill) {
-        alert('Editor not initialized. Please refresh the page.');
-        return;
-    }
-    
     const title = document.getElementById('postTitle').value.trim();
     const date = document.getElementById('postDate').value;
     const category = document.getElementById('postCategory').value.trim();
-    const content = quill.root.innerHTML;
+    
+    // Get content from active editor mode
+    let content = '';
+    const htmlEditor = document.getElementById('htmlEditor');
+    const isHtmlMode = htmlEditor && htmlEditor.style.display !== 'none';
+    
+    if (isHtmlMode) {
+        // HTML Code mode - get content directly from textarea
+        content = htmlEditor.value.trim();
+        if (!content) {
+            alert('Please enter HTML content');
+            return;
+        }
+    } else {
+        // Visual Editor mode - get content from Quill
+        if (!quill) {
+            alert('Editor not initialized. Please refresh the page.');
+            return;
+        }
+        content = quill.root.innerHTML;
+    }
 
-    if (!title || !date || !content || content === '<p><br></p>') {
+    if (!title || !date || !content || (content === '<p><br></p>' && !isHtmlMode)) {
         alert('Please fill in all required fields');
         return;
     }
@@ -614,7 +659,16 @@ async function editPost(id) {
     document.getElementById('postTitle').value = post.title;
     document.getElementById('postDate').value = post.date;
     document.getElementById('postCategory').value = post.category || '';
-    quill.root.innerHTML = post.content;
+    
+    // Set content in both editors
+    if (quill) {
+        quill.root.innerHTML = post.content;
+    }
+    const htmlEditor = document.getElementById('htmlEditor');
+    if (htmlEditor) {
+        htmlEditor.value = post.content;
+    }
+    
     document.getElementById('post-form-title').textContent = 'Edit Blog Post';
 
     showSection('new-post');
@@ -676,7 +730,15 @@ function cancelEdit() {
 function resetForm() {
     currentPostId = null;
     document.getElementById('postForm').reset();
-    quill.root.innerHTML = '';
+    if (quill) {
+        quill.root.innerHTML = '';
+    }
+    const htmlEditor = document.getElementById('htmlEditor');
+    if (htmlEditor) {
+        htmlEditor.value = '';
+    }
+    // Reset to visual editor mode
+    switchEditorMode('visual');
     setDefaultDate();
     document.getElementById('post-form-title').textContent = 'New Blog Post';
 }

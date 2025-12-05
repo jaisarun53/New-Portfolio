@@ -410,6 +410,57 @@
     border-radius: 1rem;
 }
 
+/* Editor Mode Toggle */
+.editor-mode-toggle {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    border-bottom: 2px solid var(--main-color);
+}
+
+.editor-mode-btn {
+    background: none;
+    border: none;
+    padding: 1rem 2rem;
+    cursor: pointer;
+    color: var(--text-color);
+    font-size: 1.6rem;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.editor-mode-btn:hover {
+    color: var(--main-color);
+    background: rgba(0, 238, 238, 0.1);
+}
+
+.editor-mode-btn.active {
+    color: var(--main-color);
+    border-bottom-color: var(--main-color);
+    font-weight: 700;
+}
+
+#htmlEditor {
+    width: 100%;
+    height: 400px;
+    padding: 1.5rem;
+    font-family: 'Courier New', monospace;
+    font-size: 1.4rem;
+    border: 2px solid var(--main-color);
+    border-radius: 0.5rem;
+    background: var(--bg-color);
+    color: var(--text-color);
+    resize: vertical;
+    line-height: 1.6;
+}
+
+#htmlEditor:focus {
+    outline: none;
+    border-color: var(--main-color);
+    box-shadow: 0 0 10px rgba(0, 238, 238, 0.3);
+}
+
 .form-group {
     margin-bottom: 2rem;
 }
