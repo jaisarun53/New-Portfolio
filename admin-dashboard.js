@@ -267,13 +267,28 @@ function loadTokenStatus() {
                         <strong style="font-size: 1.8rem; display: block; margin-bottom: 0.5rem;">🚀 Enable Auto-Publish!</strong>
                         <p style="margin: 0; font-size: 1.4rem; opacity: 0.9;">Add GitHub token to publish posts directly to your website. No manual upload needed!</p>
                     </div>
-                    <button onclick="showSection('settings'); setTimeout(() => document.getElementById('githubToken').focus(), 300);" 
-                            style="background: var(--bg-color); color: var(--main-color); border: none; padding: 1.2rem 2.5rem; border-radius: 0.5rem; font-weight: 700; cursor: pointer; font-size: 1.6rem; white-space: nowrap; transition: 0.3s ease;"
-                            onmouseover="this.style.transform='scale(1.05)'"
-                            onmouseout="this.style.transform='scale(1)'">
+                    <button id="setupTokenBtn" 
+                            style="background: var(--bg-color); color: var(--main-color); border: none; padding: 1.2rem 2.5rem; border-radius: 0.5rem; font-weight: 700; cursor: pointer; font-size: 1.6rem; white-space: nowrap; transition: 0.3s ease;">
                         Set Up Now →
                     </button>
                 `;
+                // Add event listeners to avoid CSP violations
+                const setupBtn = reminder.querySelector('#setupTokenBtn');
+                if (setupBtn) {
+                    setupBtn.addEventListener('click', function() {
+                        showSection('settings');
+                        setTimeout(() => {
+                            const tokenInput = document.getElementById('githubToken');
+                            if (tokenInput) tokenInput.focus();
+                        }, 300);
+                    });
+                    setupBtn.addEventListener('mouseenter', function() {
+                        this.style.transform = 'scale(1.05)';
+                    });
+                    setupBtn.addEventListener('mouseleave', function() {
+                        this.style.transform = 'scale(1)';
+                    });
+                }
                 const postsSection = document.getElementById('posts-section');
                 if (postsSection) {
                     postsSection.insertBefore(reminder, postsSection.querySelector('h2').nextSibling);
@@ -397,17 +412,17 @@ function displayPosts(posts) {
     posts.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     postsList.innerHTML = posts.map(post => {
-        // Ensure ID is properly quoted for JavaScript (handles both string and number IDs)
-        const postId = typeof post.id === 'string' ? `'${post.id.replace(/'/g, "\\'")}'` : post.id;
+        // Use data attributes instead of inline onclick to avoid CSP violations
+        const postId = escapeHtml(String(post.id));
         return `
         <div class="post-card">
             <div class="post-card-header">
                 <h3>${escapeHtml(post.title)}</h3>
                 <div class="post-actions">
-                    <button class="btn-edit" onclick="editPost(${postId})" title="Edit">
+                    <button class="btn-edit" data-post-id="${postId}" data-action="edit" title="Edit">
                         <i class="bx bx-edit"></i>
                     </button>
-                    <button class="btn-delete" onclick="deletePost(${postId})" title="Delete">
+                    <button class="btn-delete" data-post-id="${postId}" data-action="delete" title="Delete">
                         <i class="bx bx-trash"></i>
                     </button>
                 </div>
@@ -422,6 +437,25 @@ function displayPosts(posts) {
         </div>
     `;
     }).join('');
+    
+    // Add event listeners using event delegation to avoid CSP violations
+    postsList.addEventListener('click', function(e) {
+        const button = e.target.closest('button[data-action]');
+        if (!button) return;
+        
+        const postId = button.getAttribute('data-post-id');
+        const action = button.getAttribute('data-action');
+        
+        if (action === 'edit') {
+            // Handle both string and number IDs
+            const id = isNaN(postId) ? postId : parseInt(postId);
+            editPost(id);
+        } else if (action === 'delete') {
+            // Handle both string and number IDs
+            const id = isNaN(postId) ? postId : parseInt(postId);
+            deletePost(id);
+        }
+    });
 }
 
 // Switch between Visual Editor and HTML Code modes

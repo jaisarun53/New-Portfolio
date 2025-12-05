@@ -19,7 +19,7 @@
                 <a href="index.html" class="btn-view-site" target="_blank">
                     <i class="bx bx-globe"></i> View Site
                 </a>
-                <button class="btn-logout" onclick="logout()">
+                <button class="btn-logout" id="logoutBtn">
                     <i class="bx bx-log-out"></i> Logout
                 </button>
             </div>
@@ -74,10 +74,10 @@
                     <div class="form-group">
                         <label>Content *</label>
                         <div class="editor-mode-toggle">
-                            <button type="button" class="editor-mode-btn active" data-mode="visual" onclick="switchEditorMode('visual')">
+                            <button type="button" class="editor-mode-btn active" data-mode="visual" id="visualModeBtn">
                                 <i class="bx bx-edit"></i> Visual Editor
                             </button>
-                            <button type="button" class="editor-mode-btn" data-mode="html" onclick="switchEditorMode('html')">
+                            <button type="button" class="editor-mode-btn" data-mode="html" id="htmlModeBtn">
                                 <i class="bx bx-code-alt"></i> HTML Code
                             </button>
                         </div>
@@ -91,7 +91,7 @@
                     </div>
 
                     <div class="form-actions">
-                        <button type="button" class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+                        <button type="button" class="btn-cancel" id="cancelEditBtn">Cancel</button>
                         <button type="submit" class="btn-save">Save Post</button>
                     </div>
                 </form>
@@ -192,7 +192,7 @@
                 <div class="export-card">
                     <p>Export your blog posts as JSON file (backup or manual upload).</p>
                     <p class="note">💡 <strong>Tip:</strong> If you have GitHub token configured, posts auto-publish when you save. Export is only needed for backup or if auto-publish is disabled.</p>
-                    <button class="btn-export" onclick="exportBlog()">
+                    <button class="btn-export" id="exportBlogBtn">
                         <i class="bx bx-download"></i> Download blog.json
                     </button>
                 </div>
@@ -231,6 +231,37 @@
     <script>
         // Note: Cloudflare Insights CORS errors in console are from browser extensions
         // and can be safely ignored - they don't affect functionality
+        
+        // Add event listeners to avoid CSP violations with inline handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            // Logout button
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn && typeof logout === 'function') {
+                logoutBtn.addEventListener('click', logout);
+            }
+            
+            // Editor mode buttons
+            const visualModeBtn = document.getElementById('visualModeBtn');
+            const htmlModeBtn = document.getElementById('htmlModeBtn');
+            if (visualModeBtn && typeof switchEditorMode === 'function') {
+                visualModeBtn.addEventListener('click', () => switchEditorMode('visual'));
+            }
+            if (htmlModeBtn && typeof switchEditorMode === 'function') {
+                htmlModeBtn.addEventListener('click', () => switchEditorMode('html'));
+            }
+            
+            // Cancel edit button
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            if (cancelEditBtn && typeof cancelEdit === 'function') {
+                cancelEditBtn.addEventListener('click', cancelEdit);
+            }
+            
+            // Export blog button
+            const exportBlogBtn = document.getElementById('exportBlogBtn');
+            if (exportBlogBtn && typeof exportBlog === 'function') {
+                exportBlogBtn.addEventListener('click', exportBlog);
+            }
+        });
         
         // Check if all scripts loaded
         window.addEventListener('load', function() {
